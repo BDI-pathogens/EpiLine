@@ -1,0 +1,15 @@
+Package: EpiLine
+Type: Package
+Title: Bayesian Modelling in Epidemiology Case Line Lists
+Version: 0.1.0
+Author: Rob Hinch
+Maintainer: <robert.hinch@gmail.com>
+Depends: R (>= 3.3.0), Rcpp (>= 0.12.14), methods
+Imports: rstan (>= 2.17.3), rstantools (>= 1.4.0)
+LinkingTo: StanHeaders (>= 2.17.2), rstan (>= 2.17.3), Rcpp (>= 0.12.14), BH (>= 1.65.0.1),RcppEigen (>= 0.3.3.3.1)
+Imports: rstan
+Description: Estimating epi-curves and distirbutions from case line list data
+License: What license is it under?
+LazyData: TRUE
+Suggests: testthat
+

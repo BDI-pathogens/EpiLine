@@ -1,0 +1,14 @@
+# constants exposed by package
+
+# functions exposed by package
+
+# required packages
+import( rstan )
+import( Rcpp )
+import( rstantools )
+import( StanHeaders )
+import( data.table )
+import( plotly)
+
+# dynamic link for Rcpp
+useDynLib( EpiLine, .registration = TRUE )
