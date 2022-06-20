@@ -1,6 +1,7 @@
 # constants exposed by package
 
 # functions exposed by package
+export( model.symptom_report.stan )
 
 # required packages
 import( rstan )
