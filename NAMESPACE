@@ -2,6 +2,7 @@
 
 # functions exposed by package
 export( model.symptom_report.stan )
+export( symptom_report.simulator )
 
 # required packages
 import( rstan )

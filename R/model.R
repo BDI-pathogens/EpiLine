@@ -1,8 +1,9 @@
 ##################################################################
-# Descrption: model.symptom_report.stan 
+#  Name: model.symptom_report.stan 
 #
-# Stan model object for 
+#  Description: Gets the Stan model object for the symptom_report model
+# 
 ###################################################################
-model.symptom_report.stan = function() {
+model.symptom_report.stan <- function() {
   return( stanmodels$symptom_report_model )
 }
