@@ -1,14 +1,17 @@
 .eps = 1e-6
 
-##################################################################
-#  Name: symptom_report.fit.class
-###################################################################
+##################################################################/
+#  Name: symptom_report.fit.class 
+###################################################################/
 symptom_report.fit.class <- R6Class( 
   "symptom_report.fit.class",
   private = list(
     .stan_raw = NULL,
     .stan_extract = NULL,
     .stan_params = NULL,
+    .stan_data = NULL,
+    .fitted_data = NULL,
+    .report_date = NULL,
     
     .staticReturn = function( val, name )
     {
@@ -22,18 +25,69 @@ symptom_report.fit.class <- R6Class(
   active  = list(
     stan_raw     = function( val = NULL ) private$.staticReturn( val, "stan_raw" ),
     stan_extract = function( val = NULL ) private$.staticReturn( val, "stan_extract" ),
-    stan_params  = function( val = NULL ) private$.staticReturn( val, "stan_params" )
+    stan_params  = function( val = NULL ) private$.staticReturn( val, "stan_params" ),
+    stan_data    = function( val = NULL ) private$.staticReturn( val, "stan_data" ),
+    fitted_data  = function( val = NULL ) private$.staticReturn( val, "fitted_data" ),
+    report_date  = function( val = NULL ) private$.staticReturn( val, "report_date" )
   ),
   public  = list(
-    initialize = function( stan_raw, stan_params ) {
+    ##################################################################/
+    #  Name: initialize
+    ###################################################################/
+    initialize = function( stan_raw, stan_data, fitted_data, stan_params, report_date ) {
       private$.stan_raw     <- stan_raw
       private$.stan_extract <- extract( stan_raw )
+      private$.stan_data    <- stan_data
+      private$.fitted_data  <- fitted_data
       private$.stan_params  <- stan_params
+      private$.report_date  <- report_date
+    },
+    ##################################################################/
+    #  Name: plot.symptoms
+    ###################################################################/
+    plot.symptoms = function( show = TRUE ) 
+    {
+      time_offset <- self$stan_data$t_rep_min-1
+      t_max       <- self$stan_data$t_max
+      t_rep_min   <- self$stan_data$t_rep_min
+      extract     <- self$stan_extract
+      report_date <- self$report_date
+      reported    <- self$fitted_data$reported
+      t_rep       <- length( reported )
+      
+      dates   = (1:t_max) - time_offset
+      t_rep_0 = 0
+      if( !is.null( report_date ) ) {
+        dates   = report_date + dates 
+        t_rep   = report_date + t_rep 
+        t_rep_0 = report_date + t_rep_0
+      } 
+      
+      p1 = plot_ly(
+        x = dates,
+        y = colQuantiles( extract$symptoms, probs = 0.025 ),
+        type = "scatter",
+        mode = "lines",
+        line = list( color = rgb(0,0,0.5), width= 0 ),
+        showlegend = FALSE
+      ) %>%
+        add_trace( y = colQuantiles(extract$symptoms, probs = 0.975), fill = "tonexty", fillcolor = "rgba(0,0,0.5,0.3)", showlegend = TRUE, name = "CI 5%-95%") %>%
+        add_trace( y = colMedians(extract$symptoms ), line = list( width = 5 ), name = "posterior", showlegend = TRUE ) %>%
+        add_trace( y = c( rep(NA,t_rep_min-1), reported,rep(NA,t_max-t_rep_max) ), mode = "markers", showlegend = TRUE, name = "reported data" ) %>%
+        layout( 
+          xaxis  = list( title = list( "date" ) ),
+          yaxis  = list( title = list( "number of people" ) ),
+          legend = list( x = 0.05 ),
+          shapes = list(
+            list( x0=t_rep_0, x1 = t_rep_0, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1)),
+            list( x0=t_rep, x1 = t_rep, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1))))
+      if( show ) show( p1 )
+      return( p1 )
     }
   )
 )
 
-##################################################################
+##################################################################/
 #  Name: symptom_report.simulator
 #
 #  Description: Runs a simulation of the symptom_report model and
@@ -50,7 +104,7 @@ symptom_report.fit.class <- R6Class(
 #  dist_gamma     - symptom-report distribution gamma parameter (Johnson SU)
 #  dist_delta     - symptom-report distribution delta parameter (Johnson SU)
 #  report_var_over_mean - the variance over mean for negative binomial distribution of daily cases given expected cases
-###################################################################
+###################################################################/
 symptom_report.simulator <- function(
   t_rep          = 55,
   t_symptom_pre  = 20,
@@ -123,7 +177,7 @@ symptom_report.simulator <- function(
   return( list( symptom = symptom, report = report, linelist = linelist, linelist_report = ll_report, linelist_symptom = ll_symptom  ) )
 }
 
-##################################################################
+##################################################################/
 #  Name: symptom_report.fit
 #
 #  Description: Estimates the parameters in the model from the daily
@@ -135,7 +189,7 @@ symptom_report.simulator <- function(
 #  linelist_report  - vector of symptom dates (1 per person)
 #  t_symptom_pre    - maximum time before report of onset of symptoms
 #  t_symptom_post   - maximum time after report of onset of symptoms
-###################################################################
+###################################################################/
 symptom_report.fit <- function(
   reported,
   linelist_symptom,
@@ -163,7 +217,8 @@ symptom_report.fit <- function(
   prior_log_symptoms0_min = log( 0.5 ),
   prior_log_symptoms0_max = log( 50 ),
   hyper_gp_period_r    = 2,
-  hyper_gp_period_dist = 2
+  hyper_gp_period_dist = 2,
+  report_date = NULL
 )
 {
     # calculate the times require for the simultion
@@ -265,6 +320,7 @@ symptom_report.fit <- function(
     )
     
     stan_params <- list( n_chains = mcmc_n_chains, samples = mcmc_n_samples )
-    fit <- symptom_report.fit.class$new( raw, stan_params) 
+    fitted_data <- list( reported = reported, linelist_report = linelist_report, linelist_symptom = linelist_symptom )
+    fit <- symptom_report.fit.class$new( raw, data, fitted_data, stan_params, report_date ) 
     return( fit )
 }
