@@ -3,6 +3,7 @@
 # functions exposed by package
 export( model.symptom_report.stan )
 export( symptom_report.simulator )
+export( symptom_report.fit )
 
 # required packages
 import( rstan )
@@ -11,6 +12,7 @@ import( rstantools )
 import( StanHeaders )
 import( data.table )
 import( plotly)
+import( moments )
 
 # dynamic link for Rcpp
 useDynLib( EpiLine, .registration = TRUE )
