@@ -5,4 +5,13 @@
 
 library( EpiLine )
 
-simulation = symptom_report.simulator()
+# run the simulation using default paramters
+simulation <- symptom_report.simulator()
+
+# data 
+reported   <- simulation$report
+ll_report  <- simulation$linelist_report
+ll_symptom <- simulation$linelist_symptom
+
+fit <- symptom_report.fit( reported, ll_symptom, ll_report )
+ 

@@ -87,7 +87,7 @@ symptom_report.simulator <- function(
   ll_symptom  <- ll_report - round( .rjsu( length( ll_report), ll_xi, ll_lambda, ll_gamma, ll_delta ) )
   linelist    <- data.table( report = ll_report, symptom = ll_symptom )
   
-  return( list( symptom = symptom, report = report, linelist = linelist ) )
+  return( list( symptom = symptom, report = report, linelist = linelist, linelist_report = ll_report, linelist_symptom = ll_symptom  ) )
 }
 
 ##################################################################
@@ -141,7 +141,7 @@ symptom_report.fit <- function(
     if( length( linelist_symptom ) != length( linelist_report ) )
       stop( "linelist of symptom and report dates must be equal" )
     linelist <- data.table( report = linelist_report, symptom = linelist_symptom )
-    
+ 
     # enforce the max/min times
     linelist[ , symptom := pmin( pmax( symptom, report - t_symptom_pre ), report + t_symptom_post ) ]
     linelist <- linelist[ , .N, by = c("report", "symptom" ) ][ order(report,symptom) ]
