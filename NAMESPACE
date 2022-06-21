@@ -13,6 +13,7 @@ import( StanHeaders )
 import( data.table )
 import( plotly)
 import( moments )
+import( R6 )
 
 # dynamic link for Rcpp
 useDynLib( EpiLine, .registration = TRUE )

@@ -1,6 +1,39 @@
 .eps = 1e-6
 
 ##################################################################
+#  Name: symptom_report.fit.class
+###################################################################
+symptom_report.fit.class <- R6Class( 
+  "symptom_report.fit.class",
+  private = list(
+    .stan_raw = NULL,
+    .stan_extract = NULL,
+    .stan_params = NULL,
+    
+    .staticReturn = function( val, name )
+    {
+      if( !is.null( val ) )
+        stop( sprintf( "cannot set %s", name ) )
+      
+      privateName <- sprintf( ".%s", name )
+      return( private[[ privateName ]])
+    }
+  ),
+  active  = list(
+    stan_raw     = function( val = NULL ) private$.staticReturn( val, "stan_raw" ),
+    stan_extract = function( val = NULL ) private$.staticReturn( val, "stan_extract" ),
+    stan_params  = function( val = NULL ) private$.staticReturn( val, "stan_params" )
+  ),
+  public  = list(
+    initialize = function( stan_raw, stan_params ) {
+      private$.stan_raw     <- stan_raw
+      private$.stan_extract <- extract( stan_raw )
+      private$.stan_params  <- stan_params
+    }
+  )
+)
+
+##################################################################
 #  Name: symptom_report.simulator
 #
 #  Description: Runs a simulation of the symptom_report model and
@@ -230,5 +263,8 @@ symptom_report.fit <- function(
       init = init,
       pars = c( "symptoms", "r", "delta", "gamma", "lambda", "xi", "r_gp_sd")
     )
-    return( raw )
+    
+    stan_params <- list( n_chains = mcmc_n_chains, samples = mcmc_n_samples )
+    fit <- symptom_report.fit.class$new( raw, stan_params) 
+    return( fit )
 }
