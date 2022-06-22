@@ -183,6 +183,80 @@ symptom_report.fit.class <- R6Class(
 )
 
 ##################################################################/
+#  Name: symptom_report.simulation.class 
+###################################################################/
+symptom_report.simulation.class <- R6Class( 
+  "symptom_report.simulation.class",
+  private = list(
+    .reported = NULL,
+    .r        = NULL,
+    .symptom  = NULL,
+    .linelist = NULL,
+    .dist_xi     = NULL,
+    .dist_lambda = NULL,
+    .dist_gamma  = NULL,
+    .dist_delta  = NULL,
+    .t_rep          = NULL,
+    .t_symptom_pre  = NULL,
+    .t_symptom_post = NULL,
+   
+    .staticReturn = function( val, name )
+    {
+      if( !is.null( val ) )
+        stop( sprintf( "cannot set %s", name ) )
+      
+      privateName <- sprintf( ".%s", name )
+      return( private[[ privateName ]])
+    }
+  ),
+  
+  active  = list(
+    reported = function( val = NULL ) private$.staticReturn( val, "reported" ),
+    r        = function( val = NULL ) private$.staticReturn( val, "r" ),
+    symptom  = function( val = NULL ) private$.staticReturn( val, "symptom" ),
+    linelist = function( val = NULL ) private$.staticReturn( val, "linelist" ),
+    dist_xi     = function( val = NULL ) private$.staticReturn( val, "dist_xi" ),
+    dist_lambda = function( val = NULL ) private$.staticReturn( val, "dist_lambda" ),
+    dist_gamma  = function( val = NULL ) private$.staticReturn( val, "dist_gamma" ),
+    dist_delta  = function( val = NULL ) private$.staticReturn( val, "dist_delta" ),
+    t_rep          = function( val = NULL ) private$.staticReturn( val, "t_rep" ),
+    t_symptom_pre  = function( val = NULL ) private$.staticReturn( val, "t_symptom_pre" ),
+    t_symptom_post = function( val = NULL ) private$.staticReturn( val, "t_symptom_post" )
+  ),
+  public  = list(
+    ##################################################################/
+    #  Name: initialize
+    ###################################################################/
+    initialize = function( 
+      reported,
+      r,
+      symptom,
+      linelist,
+      dist_xi,
+      dist_lambda,
+      dist_gamma,
+      dist_delta,
+      t_rep,
+      t_symptom_pre,
+      t_symptom_post
+    ) 
+    {
+      private$.reported <- reported 
+      private$.r        <- r  
+      private$.symptom  <- symptom 
+      private$.linelist <- linelist
+      private$.dist_xi     <- dist_xi
+      private$.dist_lambda <- dist_lambda
+      private$.dist_gamma  <- dist_gamma
+      private$.dist_delta  <- dist_delta
+      private$.t_rep          <- t_rep
+      private$.t_symptom_pre  <- t_symptom_pre
+      private$.t_symptom_post <- t_symptom_post
+    }
+  )
+)
+
+##################################################################/
 #  Name: symptom_report.simulator
 #
 #  Description: Runs a simulation of the symptom_report model and
@@ -269,7 +343,20 @@ symptom_report.simulator <- function(
   ll_symptom  <- ll_report - round( .rjsu( length( ll_report), ll_xi, ll_lambda, ll_gamma, ll_delta ) )
   linelist    <- data.table( report = ll_report, symptom = ll_symptom )
   
-  return( list( symptom = symptom, report = report, linelist = linelist, linelist_report = ll_report, linelist_symptom = ll_symptom  ) )
+  sim = symptom_report.simulation.class$new( 
+    report,
+    r,
+    symptom,
+    linelist,
+    dist_xi,
+    dist_lambda,
+    dist_gamma,
+    dist_delta,
+    t_rep,
+    t_symptom_pre,
+    t_symptom_post
+  )
+  return( sim ) 
 }
 
 ##################################################################/
