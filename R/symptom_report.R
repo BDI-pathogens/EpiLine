@@ -53,6 +53,7 @@ symptom_report.fit.class <- R6Class(
       time_offset <- self$stan_data$t_rep_min-1
       t_max       <- self$stan_data$t_max
       t_rep_min   <- self$stan_data$t_rep_min
+      t_rep_max   <- self$stan_data$t_rep_max
       extract     <- self$stan_extract
       report_date <- self$report_date
       reported    <- self$fitted_data$reported
@@ -82,8 +83,8 @@ symptom_report.fit.class <- R6Class(
           yaxis  = list( title = list( text = "number of people" ) ),
           legend = list( x = 0.05 ),
           shapes = list(
-            list( x0=t_rep_0, x1 = t_rep_0, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1)),
-            list( x0=t_rep, x1 = t_rep, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1))))
+            list( x0=t_rep_0, x1 = t_rep_0, y0 = 0, y1 = 1, type = "line", yref = "paper", marker = list(dash = "dot", width = 1)),
+            list( x0=t_rep, x1 = t_rep, y0 = 0, y1 = 1, type = "line", yref = "paper", marker = list(dash = "dot", width = 1))))
       
       if( !is.null( simulation ) ) {
         if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
