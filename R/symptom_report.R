@@ -516,16 +516,16 @@ symptom_report.fit <- function(
     # 2.initialize r(0)=0 and for the GPs to be constant  
     init_func <- function(x) {
       return( list(
-        r_gp = rep( 0, ceil( data$t_max / data$hyper_gp_period_r ) ),
+        r_gp = rep( 0, ceiling( data$t_max / data$hyper_gp_period_r ) ),
         r_0 = 0,
         gamma0 = gamma,
         delta0 = delta,
         lambda0 = lambda,
         xi0 = xi,
-        xi_gp = rep( 0, ceil( t_rep / data$hyper_gp_period_dist ) ),
-        lambda_gp = rep( 0, ceil( t_rep / data$hyper_gp_period_dist ) ),
-        gamma_gp = rep( 0, ceil( t_rep / data$hyper_gp_period_dist ) ),
-        delta_gp = rep( 0, ceil( t_rep / data$hyper_gp_period_dist ) )
+        xi_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) ),
+        lambda_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) ),
+        gamma_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) ),
+        delta_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) )
       ) ) } 
     
     # get Stan model and sample
