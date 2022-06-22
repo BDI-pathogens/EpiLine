@@ -209,7 +209,6 @@ symptom_report.fit.class <- R6Class(
           delta  <- simulation$dist_delta
           sim1   <- .djsu( dist_days, xi[1], lambda[1], gamma[1], delta[1] )
           sim2   <- .djsu( dist_days, xi[t_rep], lambda[t_rep], gamma[t_rep], delta[t_rep] )
-          
           p1 <- p1 %>% add_trace( y = sim1, mode = "markers", marker = list( color = rgb(0,0,0.5) ), name = sprintf( "%s (sim)", dist1$date ), showlegend = TRUE )
           p1 <- p1 %>% add_trace( y = sim2, mode = "markers", marker = list( color = rgb(0,0.5,0) ), name = sprintf( "%s (sim)", dist2$date ), showlegend = TRUE )
         } else
