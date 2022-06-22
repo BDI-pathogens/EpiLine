@@ -45,7 +45,9 @@ symptom_report.fit.class <- R6Class(
     ##################################################################/
     #  Name: plot.symptoms
     ###################################################################/
-    plot.symptoms = function( show = TRUE ) 
+    plot.symptoms = function( 
+      show = TRUE
+    ) 
     {
       time_offset <- self$stan_data$t_rep_min-1
       t_max       <- self$stan_data$t_max
@@ -123,7 +125,57 @@ symptom_report.fit.class <- R6Class(
           xaxis  = list( title = list( text = "date" ) ),
           yaxis  = list( title = list( text= "r(t)" ) )
         )
-       
+      if( show ) show( p1 )
+      return( p1 )
+    },
+    ##################################################################/
+    #  Name: plot.symptom_report.dist
+    ###################################################################/
+    plot.symptom_report.dist = function( show = TRUE ) 
+    {
+      time_offset <- self$stan_data$t_rep_min-1
+      t_rep_min   <- self$stan_data$t_rep_min
+      t_rep_max   <- self$stan_data$t_rep_max
+      extract     <- self$stan_extract
+      report_date <- self$report_date
+
+      dist_from_t <- function( t_dist ) {
+        dist <- data.table( 
+          xi     = extract$xi[,t_dist], 
+          lambda = extract$lambda[,t_dist], 
+          gamma  = extract$gamma[,t_dist], 
+          delta  = extract$delta[,t_dist],
+          dummy  = 1 )
+        
+        dist <- data.table( x = c(-5:20), dummy = 1)[ dist, on= "dummy", allow.cartesian = TRUE]
+        dist[ , pdf := .djsu( x, xi, lambda, gamma, delta )]
+        dist <- dist[ , .(pdf025 = quantile(pdf, probs = 0.025), pdf50 = median(pdf), pdf975=quantile(pdf, probs = 0.975)), by = "x"]
+        return( list( dist = dist, date =  report_date + t_dist - 1 ) )  
+      }
+      dist1 = dist_from_t( 1 )
+      dist2 = dist_from_t( t_rep_max - t_rep_min + 1 )
+      
+      p1 = plot_ly(
+        dist1$dist,
+        x = ~x,
+        y = ~pdf025,
+        type = "scatter",
+        mode = "lines",
+        line = list( color = rgb(0,0,0.5), width= 0 ),
+        name = "CI 5%-95%",
+        showlegend = FALSE
+      ) %>%
+        add_trace( y = ~pdf975, fill = "tonexty", fillcolor = "rgba(0,0,0.5,0.3)") %>%
+        add_trace( y = ~pdf50, line = list( width = 5 ), name = dist1$date, showlegend = TRUE ) %>%
+        add_trace( data = dist2$dist, line = list( color = rgb(0,0.5,0), width= 0 )) %>%
+        add_trace( data = dist2$dist, y = ~pdf975, fill = "tonexty", fillcolor = "rgba(0,0.5,0,0.3)", name = "CI 5%-95%") %>%
+        add_trace( data = dist2$dist, y = ~pdf50, line = list( color = rgb(0,0.5,0),  width = 5 ), name = dist2$date, showlegend = TRUE ) %>%
+      layout(
+        legend = list( x = 0.8),
+        xaxis  = list( title = list( text = "symptom-report date interval")),
+        yaxis  = list( title = list( text = "posterior density"))
+      )
+
       if( show ) show( p1 )
       return( p1 )
     }
