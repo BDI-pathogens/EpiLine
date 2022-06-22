@@ -46,7 +46,8 @@ symptom_report.fit.class <- R6Class(
     #  Name: plot.symptoms
     ###################################################################/
     plot.symptoms = function( 
-      show = TRUE
+      show = TRUE,
+      simulation = NULL
     ) 
     {
       time_offset <- self$stan_data$t_rep_min-1
@@ -83,6 +84,18 @@ symptom_report.fit.class <- R6Class(
           shapes = list(
             list( x0=t_rep_0, x1 = t_rep_0, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1)),
             list( x0=t_rep, x1 = t_rep, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1))))
+      
+      if( !is.null( simulation ) ) {
+        if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
+          if( length( simulation$symptom ) != length( dates) )
+            stop( "simulation time period not consistent with that of fit" )
+          p1 <- p1 %>% add_trace( y = simulation$symptom, mode = "markers", name = "symptoms (simulation)", showlegend = TRUE)
+          
+        } else
+          stop( "simulation must be of type symptom_report.simulation.class" )
+  
+      }
+      
       if( show ) show( p1 )
       return( p1 )
     },
@@ -352,7 +365,7 @@ symptom_report.simulator <- function(
     dist_lambda,
     dist_gamma,
     dist_delta,
-    t_rep,
+    t_rep, 
     t_symptom_pre,
     t_symptom_post
   )
