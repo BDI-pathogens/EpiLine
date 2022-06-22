@@ -55,15 +55,15 @@ symptom_report.fit.class <- R6Class(
       reported    <- self$fitted_data$reported
       t_rep       <- length( reported )
       
-      dates   = (1:t_max) - time_offset
-      t_rep_0 = 0
+      dates   <- (1:t_max) - time_offset
+      t_rep_0 <- 0
       if( !is.null( report_date ) ) {
-        dates   = report_date + dates 
-        t_rep   = report_date + t_rep 
-        t_rep_0 = report_date + t_rep_0
+        dates   <- report_date + dates 
+        t_rep   <- report_date + t_rep 
+        t_rep_0 <- report_date + t_rep_0
       } 
       
-      p1 = plot_ly(
+      p1 <- plot_ly(
         x = dates,
         y = colQuantiles( extract$symptoms, probs = 0.025 ),
         type = "scatter",
@@ -75,12 +75,55 @@ symptom_report.fit.class <- R6Class(
         add_trace( y = colMedians(extract$symptoms ), line = list( width = 5 ), name = "posterior", showlegend = TRUE ) %>%
         add_trace( y = c( rep(NA,t_rep_min-1), reported,rep(NA,t_max-t_rep_max) ), mode = "markers", showlegend = TRUE, name = "reported data" ) %>%
         layout( 
-          xaxis  = list( title = list( "date" ) ),
-          yaxis  = list( title = list( "number of people" ) ),
+          xaxis  = list( title = list( text = "date" ) ),
+          yaxis  = list( title = list( text = "number of people" ) ),
           legend = list( x = 0.05 ),
           shapes = list(
             list( x0=t_rep_0, x1 = t_rep_0, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1)),
             list( x0=t_rep, x1 = t_rep, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1))))
+      if( show ) show( p1 )
+      return( p1 )
+    },
+    ##################################################################/
+    #  Name: plot.r
+    ###################################################################/
+    plot.r = function( show = TRUE ) 
+    {
+      time_offset <- self$stan_data$t_rep_min-1
+      t_max       <- self$stan_data$t_max
+      t_rep_min   <- self$stan_data$t_rep_min
+      extract     <- self$stan_extract
+      report_date <- self$report_date
+      reported    <- self$fitted_data$reported
+      t_rep       <- length( reported )
+      
+      dates   <- (1:t_max) - time_offset
+      t_rep_0 <- 0
+      if( !is.null( report_date ) ) {
+        dates   <- report_date + dates 
+        t_rep   <- report_date + t_rep 
+        t_rep_0 <- report_date + t_rep_0
+      } 
+     
+      p1 <- plot_ly(
+        x = dates,
+        y = colQuantiles( extract$r, probs = 0.05 ),
+        type = "scatter",
+        mode = "lines",
+        line = list( color = rgb(0,0,0.5), width= 0 ),
+        showlegend = FALSE
+      ) %>%
+        add_trace( y = colQuantiles( extract$r, probs = 0.95), fill = "tonexty", fillcolor = "rgba(0,0,0.5,0.3)", showlegend = TRUE, name = "CI 5%-95%") %>%
+        add_trace( y = colMedians(extract$r ), line = list( width = 5 ), name = "posterior", showlegend = TRUE ) %>%
+        layout( 
+          legend = list( x = 0.05 ),
+          shapes = list(
+            list( x0=t_rep_0, x1 = t_rep_0, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1)),
+            list( x0=t_rep, x1 = t_rep, y0 = 0, y1 = 1, type = "line", yref = "paper", line = list(dash = "dot", width = 1))),
+          xaxis  = list( title = list( text = "date" ) ),
+          yaxis  = list( title = list( text= "r(t)" ) )
+        )
+       
       if( show ) show( p1 )
       return( p1 )
     }
