@@ -93,7 +93,6 @@ symptom_report.fit.class <- R6Class(
           
         } else
           stop( "simulation must be of type symptom_report.simulation.class" )
-  
       }
       
       if( show ) show( p1 )
@@ -102,7 +101,7 @@ symptom_report.fit.class <- R6Class(
     ##################################################################/
     #  Name: plot.r
     ###################################################################/
-    plot.r = function( show = TRUE ) 
+    plot.r = function( show = TRUE, simulation = NULL ) 
     {
       time_offset <- self$stan_data$t_rep_min-1
       t_max       <- self$stan_data$t_max
@@ -138,20 +137,30 @@ symptom_report.fit.class <- R6Class(
           xaxis  = list( title = list( text = "date" ) ),
           yaxis  = list( title = list( text= "r(t)" ) )
         )
+      
+      if( !is.null( simulation ) ) {
+        if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
+          if( length( simulation$r ) != length( dates) )
+            stop( "simulation time period not consistent with that of fit" )
+          p1 <- p1 %>% add_trace( y = simulation$r, mode = "markers", name = "r (simulation)", showlegend = TRUE)
+        } else
+          stop( "simulation must be of type symptom_report.simulation.class" )
+      }
       if( show ) show( p1 )
       return( p1 )
     },
     ##################################################################/
     #  Name: plot.symptom_report.dist
     ###################################################################/
-    plot.symptom_report.dist = function( show = TRUE ) 
+    plot.symptom_report.dist = function( show = TRUE, simulation = NULL ) 
     {
-      time_offset <- self$stan_data$t_rep_min-1
       t_rep_min   <- self$stan_data$t_rep_min
       t_rep_max   <- self$stan_data$t_rep_max
+      t_rep       <- t_rep_max - t_rep_min + 1
       extract     <- self$stan_extract
       report_date <- self$report_date
 
+      dist_days   <- -5:20
       dist_from_t <- function( t_dist ) {
         dist <- data.table( 
           xi     = extract$xi[,t_dist], 
@@ -160,13 +169,13 @@ symptom_report.fit.class <- R6Class(
           delta  = extract$delta[,t_dist],
           dummy  = 1 )
         
-        dist <- data.table( x = c(-5:20), dummy = 1)[ dist, on= "dummy", allow.cartesian = TRUE]
+        dist <- data.table( x = dist_days, dummy = 1)[ dist, on= "dummy", allow.cartesian = TRUE]
         dist[ , pdf := .djsu( x, xi, lambda, gamma, delta )]
         dist <- dist[ , .(pdf025 = quantile(pdf, probs = 0.025), pdf50 = median(pdf), pdf975=quantile(pdf, probs = 0.975)), by = "x"]
         return( list( dist = dist, date =  report_date + t_dist - 1 ) )  
       }
       dist1 = dist_from_t( 1 )
-      dist2 = dist_from_t( t_rep_max - t_rep_min + 1 )
+      dist2 = dist_from_t( t_rep )
       
       p1 = plot_ly(
         dist1$dist,
@@ -188,6 +197,24 @@ symptom_report.fit.class <- R6Class(
         xaxis  = list( title = list( text = "symptom-report date interval")),
         yaxis  = list( title = list( text = "posterior density"))
       )
+      
+      
+      if( !is.null( simulation ) ) {
+        if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
+          if( t_rep != simulation$t_rep )
+            stop( "simulation time period not consistent with that of fit" )
+          xi     <- simulation$dist_xi
+          lambda <- simulation$dist_lambda
+          gamma  <- simulation$dist_gamma
+          delta  <- simulation$dist_delta
+          sim1   <- .djsu( dist_days, xi[1], lambda[1], gamma[1], delta[1] )
+          sim2   <- .djsu( dist_days, xi[t_rep], lambda[t_rep], gamma[t_rep], delta[t_rep] )
+          
+          p1 <- p1 %>% add_trace( y = sim1, mode = "markers", line = list( color = rgb(0,0,0.5) ), name = sprintf( "%s (sim)", dist1$date ), showlegend = TRUE )
+          p1 <- p1 %>% add_trace( y = sim2, mode = "markers", line = list( color = rgb(0,0.5,0) ), name = sprintf( "%s (sim)", dist2$date ), showlegend = TRUE )
+        } else
+          stop( "simulation must be of type symptom_report.simulation.class" )
+      }
 
       if( show ) show( p1 )
       return( p1 )
