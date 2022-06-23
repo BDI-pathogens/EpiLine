@@ -78,8 +78,8 @@ t_max          <- t_rep + t_symptom_post + t_symptom_pre
 # set up the varaible r(t) and distribution
 symptom_0 <- 20                               # initial number of symptomatic people
 r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
-xi        <- 8 * ( t_rep:1 ) / t_rep          # xi parameter in the symptom-report dist
-lambda    <- 3 -  ( t_rep:1 ) / t_rep         # lambda parameter in the symptom-report dist
+xi        <- -1 + 6 * ( t_rep:1 ) / t_rep          # xi parameter in the symptom-report dist
+lambda    <- 2 + ( t_rep:1 ) / t_rep         # lambda parameter in the symptom-report dist
 
 simulation <- symptom_report.simulator(
   t_rep          = t_rep,
@@ -111,6 +111,22 @@ fit <- symptom_report.fit( reported, ll_symptom, ll_report, report_date = report
 Once the fit is complete (this examples takes roughly 20s), we can plot the posterior of the fitted parameters against the simulation parameters.
 First we consider the estimate of the number of people developing symptoms on each day (`fit$plot.symptoms( simulation = simulation`).
 
+<img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_symptoms.png" width="700" >
+
+The dotted vertical lines in the chart show the period over which case reports were provided. 
+The extended time pre- and post- the reporting window is required because some of the reported cases in this period will have developed symptoms outside of the window,.
+Next we plot the estimated $r(t)$ for the entire period (including pre- and post- the reporting window).
+
+<img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_r.png" width="700" >
+
+Note that outside the reportiny window the estimated $r(t)$ flattens out and is different from the simulated one. 
+This is because the vast majority of the symptomtic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will not be 
+
+Finally we plot the estimated symptom-report distribution at the start and end of the reporting period.
+
+<img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_distribution.png" width="700" >
+
+Note that model successfully estimates the distribution at the start and end of the reporting period.
 
 ## Installation
 This is a R package and during the package build the Stan code is compiled. To build this package, clone the repository and then call `R CMD INSTALL --no-multiarch --with-keep.source $FULL_PATH_REPO_DIR`, where `$FULL_PATH_REPO_DIR` is the full path to the directory where the respository was cloned to. The package require `rstan`, `Rcpp`, `rstantools`, `StanHeaders`, `data.table`, `moments`, `R6`, `matrixStats` and `plotly` to be installed (all avaialbe on CRAN).
