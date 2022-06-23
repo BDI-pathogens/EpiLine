@@ -16,9 +16,8 @@ We model the daily growth rate $r(t)$ with a Gaussian process, so the daily numb
 
 $$
 \begin{align}
-  r(t) &= r( t - 1 ) + \epsilon(t), \\
-  S(t) &= S(t-1) e^{r(t)}, \\
-  \epsilon(t) & \sim N(0,\sigma^2_{r_{GP}}),
+  r(t) &\sim N( r( t - 1 ), \sigma^2_{r_{GP}}) \\
+  S(t) &= S(t-1) e^{r(t)}, 
 \end{align}
 $$
 
@@ -35,9 +34,82 @@ $$
 
 where $\tau_{\rm pre}$ is the maximum number of days pre-reporting the case develops symptoms and 
 $\tau_{\rm pre}$ the maximumn number of days post-reporting the case develops symptoms.
+The number of observed reported cases $C(t)$ is modelled as negative binomial variable
 
+$$
+C(t) \sim NB(\mu(t),\phi_{OD}),
+$$
+
+where $\phi_{OD}$ is the over-dispersion parameter.
+
+The symptom-report time distribution must support both postive and negative values. In addition, empirically it is observed that this distribution can be highly skewed with heavy tails, therefore we model it using the Johnson SU distribution which contains 4 parameters $(\xi, \lambda, \gamma,\delta)$.
+To account for the changes in the distribution over time, we model these 4 parameters using Gaussian processes
+
+$$
+\begin{align}
+  \xi(t) &\sim N( \xi( t - 1 ), \sigma^2_{\xi_{GP}}), \\
+  \lambda(t) &\sim N( \lambda( t - 1 ), \sigma^2_{\lambda_{GP}}), \\
+  \gamma(t) &\sim N( \gamma( t - 1 ), \sigma^2_{\gamma_{GP}}), \\
+  \delta(t) &\sim N( \delta( t - 1 ), \sigma^2_{\delta_{GP}}.) 
+\end{align}
+$$
+
+These parameters are estimated using line list data of individual cases where the symptoms date report date are known.
+
+Range priors are put on the initial values of all the parameters and the variances of the Gaussian processes. 
+For efficiency, we allow for the period between sampling of the Gaussian processes to be greater than day, in which case we linearly interpolate for the intermediate days.
+The posterior of the model is sampled using Stan and is contained within this R package.
+The function `symptom_report.fit` fits the model to data and `symptom_report.simulator` generates simulated data under the model.
 
 ### Example Results
+
+We now demonstrate the model using simulated data which is contained in `examples/linear_r_dist.R`.
+In this example, the daily growth rate $r(t)$ declines linearly throughout the simulation from 0.1 to -0.03, and the mean and variance of the symptom-report distribution decrease linearly with time (with constand skewness and kurtosis). 
+
+```
+library( EpiLine )
+
+# define the length of the simulatiopn
+t_rep          <- 50 # length of time for which data is reported
+t_symptom_pre  <- 20 # time before the reporting period to simulate
+t_symptom_post <- 5  # time after the reporting period to simulate
+t_max          <- t_rep + t_symptom_post + t_symptom_pre
+
+# set up the varaible r(t) and distribution
+symptom_0 <- 20                               # initial number of symptomatic people
+r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
+xi        <- 8 * ( t_rep:1 ) / t_rep          # xi parameter in the symptom-report dist
+lambda    <- 3 -  ( t_rep:1 ) / t_rep         # lambda parameter in the symptom-report dist
+
+simulation <- symptom_report.simulator(
+  t_rep          = t_rep,
+  t_symptom_pre  = t_symptom_pre,
+  t_symptom_post = t_symptom_post,
+  symptom_0   = symptom_0,
+  r           = r,
+  dist_xi     = xi,
+  dist_lambda = lambda
+)
+```
+
+We next sample from the posterior of the model using Stan (note we're using very short chains for speed so mean and variance of parameter estimates will be of limited accuracy).
+
+```
+# data 
+reported    <- simulation$reported
+ll_report   <- simulation$linelist$report
+ll_symptom  <- simulation$linelist$symptom
+report_date <- as.Date("2022-04-01")
+
+# fit using model
+mcmc_n_samples <- 100
+mcmc_n_chains  <- 1
+fit <- symptom_report.fit( reported, ll_symptom, ll_report, report_date = report_date, 
+                           mcmc_n_samples = mcmc_n_samples, mcmc_n_chains = mcmc_n_chains )
+```
+
+Once the fit is complete (this examples takes roughly 20s), we can plot the posterior of the fitted parameters against the simulation parameters.
+First we consider the estimate of the number of people developing symptoms on each day (`fit$plot.symptoms( simulation = simulation`).
 
 
 ## Installation
