@@ -15,8 +15,8 @@ t_max          <- t_rep + t_symptom_post + t_symptom_pre
 # set up the varaible r(t) and distribution
 symptom_0 <- 20                               # initial number of symptomatic people
 r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
-xi        <- 8 * ( t_rep:1 ) / t_rep          # xi parameter in the symptom-report dist
-lambda    <- 3 -  ( t_rep:1 ) / t_rep         # lambda parameter in the symptom-report dist
+xi        <- -1 + 6 *( t_rep:1 ) / t_rep          # xi parameter in the symptom-report dist
+lambda    <- 2 + ( t_rep:1 ) / t_rep         # lambda parameter in the symptom-report dist
 
 simulation <- symptom_report.simulator(
   t_rep          = t_rep,
@@ -39,6 +39,7 @@ mcmc_n_samples <- 100
 mcmc_n_chains  <- 1
 fit <- symptom_report.fit( reported, ll_symptom, ll_report, report_date = report_date, 
                            mcmc_n_samples = mcmc_n_samples, mcmc_n_chains = mcmc_n_chains )
+
 fit$plot.symptoms( simulation = simulation ) 
 fit$plot.r( simulation = simulation )
 fit$plot.symptom_report.dist( simulation = simulation )
