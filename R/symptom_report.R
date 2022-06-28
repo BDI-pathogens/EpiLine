@@ -7,7 +7,7 @@ symptom_report.fit.class <- R6Class(
   "symptom_report.fit.class",
   private = list(
     .stan_raw = NULL,
-    .stan_extract = NULL,
+    .stan_extract = NULL, 
     .stan_params = NULL,
     .stan_data = NULL,
     .fitted_data = NULL,
@@ -49,16 +49,16 @@ symptom_report.fit.class <- R6Class(
       show = TRUE,
       simulation = NULL
     ) 
-    {
-      time_offset <- self$stan_data$t_rep_min-1
-      t_max       <- self$stan_data$t_max
-      t_rep_min   <- self$stan_data$t_rep_min
-      t_rep_max   <- self$stan_data$t_rep_max
+    { 
+      t_rep       <- self$stan_data$t_rep    
+      time_offset <- self$stan_data$t_symptom_pre
+      t_max       <- t_rep + time_offset + self$stan_data$t_symptom_post
+      t_rep_min   <- self$stan_data$t_symptom_pre + 1
+      t_rep_max   <- t_rep + time_offset
       extract     <- self$stan_extract
       report_date <- self$report_date
       reported    <- self$fitted_data$reported
-      t_rep       <- length( reported )
-      
+
       dates   <- (1:t_max) - time_offset
       t_rep_0 <- 0
       if( !is.null( report_date ) ) {
@@ -104,14 +104,15 @@ symptom_report.fit.class <- R6Class(
     ###################################################################/
     plot.r = function( show = TRUE, simulation = NULL ) 
     {
-      time_offset <- self$stan_data$t_rep_min-1
-      t_max       <- self$stan_data$t_max
-      t_rep_min   <- self$stan_data$t_rep_min
+      t_rep       <- self$stan_data$t_rep    
+      time_offset <- self$stan_data$t_symptom_pre
+      t_max       <- t_rep + time_offset + self$stan_data$t_symptom_post
+      t_rep_min   <- self$stan_data$t_symptom_pre + 1
+      t_rep_max   <- t_rep + time_offset
       extract     <- self$stan_extract
       report_date <- self$report_date
       reported    <- self$fitted_data$reported
-      t_rep       <- length( reported )
-      
+        
       dates   <- (1:t_max) - time_offset
       t_rep_0 <- 0
       if( !is.null( report_date ) ) {
@@ -155,13 +156,15 @@ symptom_report.fit.class <- R6Class(
     ###################################################################/
     plot.symptom_report.dist = function( show = TRUE, simulation = NULL ) 
     {
-      t_rep_min   <- self$stan_data$t_rep_min
-      t_rep_max   <- self$stan_data$t_rep_max
-      t_rep       <- t_rep_max - t_rep_min + 1
+      t_rep       <- self$stan_data$t_rep    
+      time_offset <- self$stan_data$t_symptom_pre
+      t_max       <- t_rep + time_offset + self$stan_data$t_symptom_post
+      t_rep_min   <- self$stan_data$t_symptom_pre + 1
+      t_rep_max   <- t_rep + time_offset
       extract     <- self$stan_extract
       report_date <- self$report_date
 
-      dist_days   <- -5:20
+      dist_days   <- (- self$stan_data$t_symptom_post):(self$stan_data$t_symptom_pre)
       dist_from_t <- function( t_dist ) {
         dist <- data.table( 
           xi     = extract$xi[,t_dist], 
@@ -173,10 +176,10 @@ symptom_report.fit.class <- R6Class(
         dist <- data.table( x = dist_days, dummy = 1)[ dist, on= "dummy", allow.cartesian = TRUE]
         dist[ , pdf := .djsu( x, xi, lambda, gamma, delta )]
         dist <- dist[ , .(pdf025 = quantile(pdf, probs = 0.025), pdf50 = median(pdf), pdf975=quantile(pdf, probs = 0.975)), by = "x"]
-        return( list( dist = dist, date =  report_date + t_dist - 1 ) )  
+        return( list( dist = dist, date =  report_date + t_dist - time_offset ) )  
       }
-      dist1 = dist_from_t( 1 )
-      dist2 = dist_from_t( t_rep )
+      dist1 = dist_from_t( t_rep_min )
+      dist2 = dist_from_t( t_rep_max )
       
       p1 = plot_ly(
         dist1$dist,
@@ -199,17 +202,18 @@ symptom_report.fit.class <- R6Class(
         yaxis  = list( title = list( text = "posterior density"))
       )
       
-      
       if( !is.null( simulation ) ) {
         if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
           if( t_rep != simulation$t_rep )
             stop( "simulation time period not consistent with that of fit" )
+          if( ( self$stan_data$t_symptom_pre != simulation$t_symptom_pre ) | ( self$stan_data$t_symptom_post != simulation$t_symptom_post ) )
+            stop( "simulation t_sympton_pre and _post not consistent with that used in fit")
           xi     <- simulation$dist_xi
           lambda <- simulation$dist_lambda
           gamma  <- simulation$dist_gamma
           delta  <- simulation$dist_delta
-          sim1   <- .djsu( dist_days, xi[1], lambda[1], gamma[1], delta[1] )
-          sim2   <- .djsu( dist_days, xi[t_rep], lambda[t_rep], gamma[t_rep], delta[t_rep] )
+          sim1   <- .djsu( dist_days, xi[t_rep_min], lambda[t_rep_min], gamma[t_rep_min], delta[t_rep_min] )
+          sim2   <- .djsu( dist_days, xi[t_rep_max], lambda[t_rep_max], gamma[t_rep_max], delta[t_rep_max] )
           p1 <- p1 %>% add_trace( y = sim1, mode = "markers", marker = list( color = rgb(0,0,0.5) ), name = sprintf( "%s (sim)", dist1$date ), showlegend = TRUE )
           p1 <- p1 %>% add_trace( y = sim2, mode = "markers", marker = list( color = rgb(0,0.5,0) ), name = sprintf( "%s (sim)", dist2$date ), showlegend = TRUE )
         } else
@@ -303,7 +307,7 @@ symptom_report.simulation.class <- R6Class(
 #  returns the line list of cases by day
 # 
 #  Arguments:
-#  t_rep          - time periods for which data is reported
+#  t_max          - total time for which data is reported
 #  t_symptom_pre  - maximum time before report of onset of symptoms
 #  t_symptom_post - maximum time after report of onset of symptoms
 #  symptom_0      - initial number of symptomatic individuals
@@ -315,8 +319,8 @@ symptom_report.simulation.class <- R6Class(
 #  report_var_over_mean - the variance over mean for negative binomial distribution of daily cases given expected cases
 ###################################################################/
 symptom_report.simulator <- function(
-  t_rep          = 55,
-  t_symptom_pre  = 20,
+  t_rep          = 50,
+  t_symptom_pre  = 30,
   t_symptom_post = 5,
   symptom_0      = 2,
   r              = 0.05,
@@ -351,20 +355,23 @@ symptom_report.simulator <- function(
   symptom <- round( symptom_0 * exp( cumsum( r ) ) )
   
   # check the length of the distribution paramters
-  if( length( dist_xi ) == 1 )     dist_xi     <- rep( dist_xi, t_rep )
-  if( length( dist_lambda ) == 1 ) dist_lambda <- rep( dist_lambda, t_rep )
-  if( length( dist_gamma ) == 1 )  dist_gamma  <- rep( dist_gamma, t_rep )
-  if( length( dist_delta ) == 1 )  dist_delta  <- rep( dist_delta, t_rep )
-  if( length( dist_xi ) != t_rep | length( dist_lambda ) != t_rep | length( dist_gamma ) != t_rep | length( dist_delta ) != t_rep  )
-    stop( "dist_xxxxx paramters must be of length 1 or t_rep" )
+  if( length( dist_xi ) == 1 )     dist_xi     <- rep( dist_xi, t_max )
+  if( length( dist_lambda ) == 1 ) dist_lambda <- rep( dist_lambda, t_max )
+  if( length( dist_gamma ) == 1 )  dist_gamma  <- rep( dist_gamma, t_max )
+  if( length( dist_delta ) == 1 )  dist_delta  <- rep( dist_delta, t_max )
+  if( length( dist_xi ) != t_max | length( dist_lambda ) != t_max | length( dist_gamma ) != t_max | length( dist_delta ) != t_max  )
+    stop( "dist_xxxxx paramters must be of length 1 or t_max" )
   
   # get the expected number reported each day
   report <- rep(0, t_rep)
-  for( t in 1:t_rep )
-    for( t_off in -4:20 ) {
-      tt        <- t + t_rep_min - t_off
-      report[t] <- report[t] + symptom[tt] * .djsu( t_off, dist_xi[t], dist_lambda[t], dist_gamma[t], dist_delta[t])
-    }
+  for( sdx in 1:t_max ) {
+    for( tau in (-t_symptom_post):t_symptom_pre ) {
+      rdx = sdx + tau - t_symptom_pre;
+      if( rdx < 1 | rdx > t_rep )
+        next;
+      report[ rdx ] <- report[ rdx ] + symptom[sdx] * .djsu( tau, dist_xi[sdx], dist_lambda[sdx], dist_gamma[sdx], dist_delta[sdx])
+    } 
+  }
   
   # the number of actual report cases is assumed to be a negative binomial based on this
   if( report_var_over_mean == 1 ) {
@@ -375,13 +382,17 @@ symptom_report.simulator <- function(
     stop( "variance over mean must be greater or eqaual to one")
  
   # generate a global linelist
-  ll_report   <- rep( 1:t_rep, report )
-  ll_gamma    <- rep( dist_gamma, report )
-  ll_delta    <- rep( dist_delta, report )
-  ll_xi       <- rep( dist_xi, report )
-  ll_lambda   <- rep( dist_lambda, report )
-  ll_symptom  <- ll_report - round( .rjsu( length( ll_report), ll_xi, ll_lambda, ll_gamma, ll_delta ) )
+  ll_symptom  <- rep( 1:t_max, symptom )
+  ll_gamma    <- rep( dist_gamma, symptom )
+  ll_delta    <- rep( dist_delta, symptom)
+  ll_xi       <- rep( dist_xi, symptom )
+  ll_lambda   <- rep( dist_lambda, symptom )
+  ll_report   <- ll_symptom + round( .rjsu( length( ll_symptom), ll_xi, ll_lambda, ll_gamma, ll_delta ) )
   linelist    <- data.table( report = ll_report, symptom = ll_symptom )
+  
+  linelist[ , report  := report - t_symptom_pre ]
+  linelist[ , symptom := symptom - t_symptom_pre ]
+  linelist = linelist[ report > 0 & report <= t_rep ]
   
   sim = symptom_report.simulation.class$new( 
     report,
@@ -412,11 +423,11 @@ symptom_report.simulator <- function(
 #  t_symptom_pre    - maximum time before report of onset of symptoms
 #  t_symptom_post   - maximum time after report of onset of symptoms
 ###################################################################/
-symptom_report.fit <- function(
+  symptom_report.fit <- function(
   reported,
   linelist_symptom,
   linelist_report,
-  t_symptom_pre  = 20,
+  t_symptom_pre  = 30,
   t_symptom_post = 5,
   mcmc_n_samples = 1e2,
   mcmc_n_chains  = 1,
@@ -457,16 +468,14 @@ symptom_report.fit <- function(
     linelist <- linelist[ , .N, by = c("report", "symptom" ) ][ order(report,symptom) ]
     
     # shift the dates by t_symptom_pre since the fitted GPs run for the extra time
-    linelist[ , report  := report + t_symptom_pre ]
-    linelist[ , symptom := symptom + t_symptom_pre ]
+    linelist[ , report  := report ]
+    linelist[ , symptom := symptom ]
     
     # prepare the data for Stan
     data <- list(
-      t_max     = t_max,
-      t_rep_min = t_symptom_pre + 1,
-      t_rep_max          = t_rep + t_symptom_pre,
-      t_rep_symptoms_max = t_symptom_pre - 1,
-      t_rep_symptoms_min = -t_symptom_post+1,
+      t_rep          = t_rep,
+      t_symptom_pre  = t_symptom_pre,
+      t_symptom_post = t_symptom_post,
       reported    = reported,
       n_ll        = linelist[, .N ],
       ll_report   = linelist[ , report ],
@@ -500,32 +509,38 @@ symptom_report.fit <- function(
     ll_var  <- var( linelist[ , rep( report - symptom, N)])
     ll_skew <- skewness( linelist[ , rep( report - symptom, N)])
     
-    delta  <- runif( 1,1,2)
+    delta  <- runif( 1,1.5,2)
     t_skew <- function( gamma ) return( .jsu.skewness( 1, 1, gamma, delta ) - ll_skew )
-    gamma  <- uniroot( t_skew, lower = -100, upper = 100)$root
+    if( t_skew( prior_gamma_min ) * t_skew( prior_gamma_max ) > 0 ) {
+      if( ll_skew > 0 )
+        gamma <- prior_gamma_min
+      else
+        gamma <- prior_gamma_max 
+    } else
+      gamma  <- uniroot( t_skew, lower = prior_gamma_min, upper = prior_gamma_max )$root
     gamma  <- pmin( pmax( gamma, prior_gamma_min + .eps ), prior_gamma_max - .eps )
     
     t_var  <- function( lambda ) return( .jsu.var( 1, lambda, gamma, delta ) - ll_var )
-    lambda <- uniroot( t_var, lower = 1e-6, upper = 100)$root
+    lambda <- uniroot( t_var, lower = prior_lambda_min, upper = prior_lambda_max)$root
     lambda <- pmin( pmax( lambda, prior_lambda_min + .eps ), prior_lambda_max - .eps )
     
     t_mean <- function( xi )return( .jsu.mean( xi, lambda, gamma, delta ) - ll_mean )
-    xi     <- uniroot( t_mean, lower = -100, upper = 100)$root
+    xi     <- uniroot( t_mean, lower = prior_xi_min, upper = prior_xi_max)$root
     xi     <- pmin( pmax( xi, prior_xi_min + .eps ), prior_xi_max - .eps )
     
     # 2.initialize r(0)=0 and for the GPs to be constant  
     init_func <- function(x) {
       return( list(
-        r_gp = rep( 0, ceiling( data$t_max / data$hyper_gp_period_r ) ),
+        r_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_r ) ),
         r_0 = 0,
         gamma0 = gamma,
         delta0 = delta,
         lambda0 = lambda,
         xi0 = xi,
-        xi_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) ),
-        lambda_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) ),
-        gamma_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) ),
-        delta_gp = rep( 0, ceiling( t_rep / data$hyper_gp_period_dist ) )
+        xi_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) ),
+        lambda_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) ),
+        gamma_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) ),
+        delta_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) )
       ) ) } 
     
     # get Stan model and sample

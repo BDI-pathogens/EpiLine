@@ -8,15 +8,15 @@ library( EpiLine )
 
 # define the length of the simulatiopn
 t_rep          <- 50 # length of time for which data is reported
-t_symptom_pre  <- 20 # time before the reporting period to simulate
+t_symptom_pre  <- 30 # time before the reporting period to simulate
 t_symptom_post <- 5  # time after the reporting period to simulate
 t_max          <- t_rep + t_symptom_post + t_symptom_pre
 
 # set up the varaible r(t) and distribution
-symptom_0 <- 20                               # initial number of symptomatic people
+symptom_0 <- 2                                # initial number of symptomatic people
 r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
-xi        <- -1 + 6 *( t_rep:1 ) / t_rep          # xi parameter in the symptom-report dist
-lambda    <- 2 + ( t_rep:1 ) / t_rep         # lambda parameter in the symptom-report dist
+xi        <- -1 + 6 *( t_max:1 ) / t_max      # xi parameter in the symptom-report dist
+lambda    <- 2 + ( t_max:1 ) / t_max          # lambda parameter in the symptom-report dist
 
 simulation <- symptom_report.simulator(
   t_rep          = t_rep,

@@ -20,12 +20,10 @@ functions {
 }
 
 data {
-  int<lower=1> t_max;                                      // total days to calculate new symptoms
-  int<lower=1,upper=t_max> t_rep_min;                      // first day of reporting
-  int<lower=t_rep_min,upper=t_max> t_rep_max;              // final day of reporting
-  int<lower=1,upper=t_rep_min-1> t_rep_symptoms_max;       // max time of reporting after symptoms
-  int<lower=t_rep_max-t_max+1,upper=0> t_rep_symptoms_min; // min time of reporting before symptoms
-  int reported[t_rep_max-t_rep_min+1];                     // number of report cases by day
+  int<lower=1> t_rep;           // total days of reporting
+  int<lower=1> t_symptom_pre;   // max time of reporting after symptoms
+  int<lower=1> t_symptom_post;  // max time of reporting before symptoms
+  int reported[t_rep];          // number of report cases by day
   int n_ll;
   int ll_report[n_ll];
   int ll_symptoms[n_ll];
@@ -48,39 +46,53 @@ data {
   real prior_r_0_max;
   real prior_r_gp_sd_max;
   real prior_phi_od_max;
-  int<lower=1,upper=t_max> hyper_gp_period_r;
-  int<lower=1,upper=t_max> hyper_gp_period_dist;
+  int<lower=1,upper=t_rep + t_symptom_pre + t_symptom_post> hyper_gp_period_r;
+  int<lower=1,upper=t_rep + t_symptom_pre + t_symptom_post> hyper_gp_period_dist;
 }
 
 transformed data {
-  int t_rep            = t_rep_max - t_rep_min + 1;
-  int t_rep_symptoms   = t_rep_symptoms_max - t_rep_symptoms_min + 1;
-  int t_rep_offset_min = t_rep_min - t_rep_symptoms_max;
-  int t_rep_offset_max = t_rep_min - t_rep_symptoms_min;
+  int t_max            = t_rep + t_symptom_pre + t_symptom_post;
+  int t_rep_symptoms   = t_symptom_pre + t_symptom_post + 1;
   vector[t_rep_symptoms] t_rep_symptoms_v;
   vector[t_rep] t_rep_ones_v;
-  matrix[t_rep_symptoms,t_rep] line_list;
-  int rep_symptoms_offset;
+  matrix[t_rep_symptoms,t_max] line_list;
   int t_r_max = ceil_integer( ( 1.0 * t_max ) / hyper_gp_period_r, 1, t_max );
   int t_t_r_map[ t_max ];
   real prior_r_gp_sd_max_adj;
-  int t_dist_max = ceil_integer( ( 1.0 * t_rep ) / hyper_gp_period_dist, 1, t_rep );
-  int t_t_dist_map[ t_rep ];
+  int t_dist_max = ceil_integer( ( 1.0 * t_max ) / hyper_gp_period_dist, 1, t_max );
+  int t_t_dist_map[ t_max ];
   real prior_xi_gp_sd_max_adj;
   real prior_lambda_gp_sd_max_adj;
   real prior_gamma_gp_sd_max_adj;
   real prior_delta_gp_sd_max_adj;
+  int sdxx;
+  int ddxx;
+  int tau;
+  int<lower=1,upper=t_rep> rdx_conv_min_idx[t_max];
+  int<lower=1,upper=t_rep> rdx_conv_max_idx[t_max];
+  int<lower=1,upper=t_rep_symptoms> ddx_conv_min_idx[t_max];
+  int<lower=1,upper=t_rep_symptoms> ddx_conv_max_idx[t_max];
+
+  // NOTE ON INDEXING
+  // reported cases are indexed by:                   rdx = 1..t_rep
+  // symptoms are indexed by:                         sdx = 1..t_max
+  // the symptom and report time are the same when:   sdx = rdx + t_symptom_pre
+  // symptom-report time indexed by:                  ddx = 1..t_rep_sypmtoms
+  // actual symptom-report time is:                   tau = ddx - 1 - t_symptom_post
 
   // useful vectors for convolution
-  t_rep_symptoms_v = t_rep_symptoms_max - cumulative_sum( rep_vector( 1, t_rep_symptoms ) ) + 1;
-  t_rep_ones_v     = rep_vector( 1, t_rep );
+  for( ddx in 1:t_rep_symptoms )
+    t_rep_symptoms_v[ ddx ] = -t_symptom_post + ddx - 1;
+  t_rep_ones_v = rep_vector( 1, t_rep );
 
-  // convert line-list to relative time from report time
-  line_list = rep_matrix( 0, t_rep_symptoms, t_rep );
+  // convert line-list to relative time from symptom time
+  line_list = rep_matrix( 0, t_rep_symptoms, t_max );
   for( idx in 1:n_ll ) {
-    rep_symptoms_offset = t_rep_symptoms_max + 1 - ( ll_report[ idx ] - ll_symptoms[ idx ] );
-    rep_symptoms_offset = max( min( rep_symptoms_offset, t_rep_symptoms ), 1 );
-    line_list[ rep_symptoms_offset, ll_report[ idx ] - t_rep_min + 1 ] = ll_N[ idx ];
+    tau  = ll_report[ idx ] - ll_symptoms[ idx];
+    ddxx = tau + t_symptom_post + 1;
+    ddxx = max( min( ddxx, t_rep_symptoms ), 1 );
+    sdxx = max( min( ll_symptoms[idx] + t_symptom_pre, t_max ), 1 );
+    line_list[ ddxx, sdxx ] = ll_N[ idx ];
   }
 
   // gp at a lower frequency, adjust prior and create time conversion maps
@@ -89,11 +101,21 @@ transformed data {
   prior_lambda_gp_sd_max_adj = prior_lambda_gp_sd_max / sqrt( hyper_gp_period_dist );
   prior_gamma_gp_sd_max_adj  = prior_gamma_gp_sd_max / sqrt( hyper_gp_period_dist );
   prior_delta_gp_sd_max_adj  = prior_delta_gp_sd_max / sqrt( hyper_gp_period_dist );
-  for( t in 1:t_max ) {
-    t_t_r_map[ t ]    = ceil_integer( ( 1.0 * t ) / hyper_gp_period_r, 1, t_max );
+  for( sdx in 1:t_max ) {
+    t_t_r_map[ sdx ]    = ceil_integer( ( 1.0 * sdx ) / hyper_gp_period_r, 1, t_max );
+    t_t_dist_map[ sdx ] = ceil_integer( ( 1.0 * sdx ) / hyper_gp_period_dist, 1, t_max );
   }
-  for( t in 1:t_rep ) {
-    t_t_dist_map[ t ] = ceil_integer( ( 1.0 * t ) / hyper_gp_period_dist, 1, t_max );
+  
+  // When calculating the expected number of reports on each day, we take the
+  // convolution of the report-symptom time distribution and the number of 
+  // symptomatic. Given the the report-symptom time distribution changes on 
+  // each symptomatic date, it is easiest for each day we calculate the number 
+  // of symptomatic to distribute them between the report groups.
+  for( sdx in 1:t_max ){
+    rdx_conv_min_idx[sdx] = max( 1, sdx - t_rep_symptoms + 1 );
+    rdx_conv_max_idx[sdx] = min( sdx, t_rep );
+    ddx_conv_min_idx[sdx] = max( 1, t_rep_symptoms + 1 - sdx );
+    ddx_conv_max_idx[sdx] = min( t_rep_symptoms,t_rep_symptoms + t_rep - sdx );
   }
 }
 
@@ -120,12 +142,12 @@ parameters {
 transformed parameters {
   vector[t_max] symptoms;
   vector[t_max] r;
-  real<lower=prior_xi_min,upper=prior_xi_max> xi[t_rep];
-  real<lower=prior_lambda_min,upper=prior_lambda_max> lambda[t_rep];
-  real<lower=prior_gamma_min,upper=prior_gamma_max> gamma[t_rep];
-  real<lower=prior_delta_min,upper=prior_delta_max> delta[t_rep];
+  real<lower=prior_xi_min,upper=prior_xi_max> xi[t_max];
+  real<lower=prior_lambda_min,upper=prior_lambda_max> lambda[t_max];
+  real<lower=prior_gamma_min,upper=prior_gamma_max> gamma[t_max];
+  real<lower=prior_delta_min,upper=prior_delta_max> delta[t_max];
   vector[t_rep] reported_intensity;
-  matrix[t_rep_symptoms,t_rep] rep_symptoms_lpdf;
+  matrix[t_rep_symptoms,t_max] rep_symptoms_lpdf;
 
   // the number of symptoms cases follows a log normal process
   for( idx in 1:t_max )
@@ -139,20 +161,28 @@ transformed parameters {
   lambda[1] = lambda0;
   gamma[1]  = gamma0;
   delta[1]  = delta0;
-  for( idx in 2:t_rep ) {
-    xi[idx]     = xi[idx-1] + xi_gp[ t_t_dist_map[ idx ]];
-    lambda[idx] = lambda[idx-1] + lambda_gp[ t_t_dist_map[ idx ]];
-    gamma[idx]  = gamma[idx-1] + gamma_gp[ t_t_dist_map[ idx ]];
-    delta[idx]  = delta[idx-1] + delta_gp[ t_t_dist_map[ idx ]];
+  for( sdx in 2:t_max ) {
+    xi[sdx]     = xi[sdx-1] + xi_gp[ t_t_dist_map[ sdx ]];
+    lambda[sdx] = lambda[sdx-1] + lambda_gp[ t_t_dist_map[ sdx ]];
+    gamma[sdx]  = gamma[sdx-1] + gamma_gp[ t_t_dist_map[ sdx ]];
+    delta[sdx]  = delta[sdx-1] + delta_gp[ t_t_dist_map[ sdx ]];
   }
 
-  // take the convoluation with the daily symptoms-report distribution
-  for( t in 1:t_rep )
-    rep_symptoms_lpdf[ , t ] = johnson_su_lpd( t_rep_symptoms_v, rep_vector( gamma[t], t_rep_symptoms ), rep_vector( delta[t], t_rep_symptoms ),
-        rep_vector( lambda[t], t_rep_symptoms ),rep_vector( xi[t], t_rep_symptoms ), t_rep_symptoms );
-
- for( t in 1:t_rep )
-    reported_intensity[ t ] = dot_product( symptoms[ (t + t_rep_offset_min ):(t + t_rep_offset_max )], exp( rep_symptoms_lpdf[ , t ]));
+  reported_intensity = rep_vector( 0, t_rep );
+  for( sdx in 1:t_max ){
+    // calculate the report-symptom distribution for each symptom time
+    rep_symptoms_lpdf[ , sdx ] = johnson_su_lpd( t_rep_symptoms_v, rep_vector( gamma[sdx], t_rep_symptoms ), rep_vector( delta[sdx], t_rep_symptoms ),
+        rep_vector( lambda[sdx], t_rep_symptoms ),rep_vector( xi[sdx], t_rep_symptoms ), t_rep_symptoms );
+  
+    // take the convoluation with the symptoms to get expected report
+    reported_intensity[ rdx_conv_min_idx[sdx]:rdx_conv_max_idx[sdx]] += symptoms[ sdx ] * 
+      exp( rep_symptoms_lpdf[ ddx_conv_min_idx[sdx]:ddx_conv_max_idx[sdx], sdx ]);
+      
+    // when fitting the line list data need to take in to account many observations are truncated
+    rep_symptoms_lpdf[ , sdx ] -= log( sum( exp( rep_symptoms_lpdf[ ddx_conv_min_idx[sdx]:ddx_conv_max_idx[sdx], sdx ]) ) );
+  }
+  
+ 
 }
 
 model {
