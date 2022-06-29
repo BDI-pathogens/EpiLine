@@ -131,11 +131,21 @@ Note that model successfully estimates the distribution at the start and end of 
 To run the model on real data you need to provide the function `symptom_report.fit()` with both the time-series of the number of reported cases and the line list of symptom-report case pairs. Note that it is not necessary to have line list data for all reported cases, so for a reported case where there is no data about the time of symptoms, it should be included in the time-series but not the line list. 
 
 Required arguments of `symptom_report.fit( reported, linelist_symptom, linelist_report )`
-1. `reported` - a vector of integers with length of the reporting period containing the total number of cases reported each day. The first entry is for the earliest report date with following entries being ordered for each day of the reporting period (if no reported cases on a day then it should be entered as a 0).
-2. `linelist_symptom` - a vector with length of the number of cases for which both symptom and report date are known. The value is an integer of the date that each case developed symptoms relative to the reporting period start date (a value of 1 means symptoms were developed on the first day for which there are reported cases). Note that values are allowed to be positive.
-3. `linelist_report` - a vector with length of the number of cases for which both symptom and report date are known, paired with `linelist_symptom`. The value is an integer of the date that each was reported relative to the reporting period start date. Note that all reported cases should be during the reporting periods used in `reported`, i.e. all values are between 1 and the length of `reported`.
+1. `reported` - a vector of integers with length of the reporting period and containing the total number of cases reported each day. The first entry is for the earliest report date with following entries being ordered for each day in the reporting period (if no reported cases on a day then it should be entered as a 0).
+2. `linelist_symptom` - a vector with length of the number of cases for which both symptom and report date are known. The value is an integer of the date that each case developed symptoms relative to the reporting period start date (a value of 1 means symptoms were developed on the first day for which there are reported cases). Note that values are allowed to be negative.
+3. `linelist_report` - a vector with length of the number of cases for which both symptom and report date are known, paired with `linelist_symptom`. The value is an integer of that each case was reported relative to the reporting period start date. Note that all reported cases should be during the reporting periods used in `reported`, i.e. all values are between 1 and the length of `reported`.
+
+Option arguments which can be set are:
+1. `report_date` - the date of the start of the reporting period (e.g. `as.Date("2022-04-01")`). This is only used for the final plotting of the posteriors.
+2. `mcmc_n_samples` - the number of samples that the MCMC chains in Stan run for. This is default to `100` for a quick a dirty result (and will produce Stan warnings when run). We recommend using `1000` or `2000` for producing accurate answers.
+3.  `mcmc_n_hcainss` - the number of MCMC chains in Stan. This is default to `1` for a quick a dirty result, we recommend using at least `3` to allow for cross-chain checks.
+4.  `prior_xxxxx` - for setting the priors in the model.
 
 The output charts are member functions of the R6 fit object returned by `fit=symptom_report.fit()`. The output is shown in the Example section above for results on simulated data (note with real data you do not provide a simulation object i.e. just call `fit$plot.symptoms()`). 
+
+1. `fit$plot.symptoms()` - shows a plot of the posterior distribution for the number of people developing symptoms at each time point along with the report data (note this in general is lagged compared to symptoms). 
+2. `fit$plot.r()` - shows a plot of the posterior distribution of the daily growth rate r(t). 
+2. `fit$plot.symptom_report.dist()` - shows a plot of the posterior distribution of symptom-report distribution for the start and end of the reporting period. 
 
 ## Installation
 This is a R package and during the package build the Stan code is compiled. To build this package, clone the repository and then call `R CMD INSTALL --no-multiarch --with-keep.source $FULL_PATH_REPO_DIR`, where `$FULL_PATH_REPO_DIR` is the full path to the directory where the respository was cloned to. The package require `rstan`, `Rcpp`, `rstantools`, `StanHeaders`, `data.table`, `moments`, `R6`, `matrixStats` and `plotly` to be installed (all avaialbe on CRAN).
