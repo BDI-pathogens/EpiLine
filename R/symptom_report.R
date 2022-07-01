@@ -410,6 +410,59 @@ symptom_report.simulator <- function(
   return( sim ) 
 }
 
+
+##################################################################/
+#  Name: .fit_data_from_csv 
+#
+#  Description:  read the fit data from csv
+##################################################################/
+.fit_data_from_csv <- function( file_reported, file_linelist )
+{
+  if( !file.exists( file_reported ) )
+    stop( "file_reported does note exist")
+  dt   <- fread( file_reported )
+  cols <- names( dt )
+  if( length( cols ) != 2 | cols[1] != "date" | cols[2] != "reported" )
+    stop( "file_reported must contain 2 columns with header date,reported")
+  dt[ , date := as.Date( date )]
+  dt <- dt[ order( date ) ]
+  dt[ , reported := as.integer( reported ) ]
+  if( dt[ , max( is.na( date )) ] | dt[ , max( is.null( date )) ] )
+    stop( "a date is misformed in the file_reported, should be of form 2022-05-01")
+  if( dt[ , max( is.na( reported )) ] | dt[ , max( is.null( reported )) ] | dt[ , min( reported ) ] < 0 )
+    stop( "a reported values is misformed in file_reported, should be positive integers")
+  # fill in any missing dates
+  report_date <- dt[ 1, date ]
+  max_date    <- tail( dt[ , date ], 1 )
+  dt_clean    <- data.table( date = report_date + ( 0:as.integer(max_date-report_date)) )
+  dt_clean    <- dt[ dt_clean, on = "date" ]   
+  dt_clean[ , reported := ifelse( is.na( reported ), 0 , reported ) ]
+  reported <- dt_clean[ , reported]
+  
+  if( !file.exists( file_linelist ) )
+    stop( "file_linelist does note exist")
+  dt   <- fread( file_linelist )
+  cols <- names( dt )
+  if( length( cols ) != 2 | cols[1] != "report" | cols[2] != "symptom" )
+    stop( "file_linelist must contain 2 columns with header report,symptom")
+  dt[ , report := as.Date( report )]
+  dt[ , symptom := as.Date( symptom )]
+  if( dt[ , max( is.na( report)) ] | dt[ , max( is.null( symptom )) ] )
+    stop( "a date is misformed in the file_linelist, should be of form 2022-05-01 (remove any entries where symptom date is unknown)")
+  
+  # remove points outside of the reporting range
+  outside_points <- dt[ report < report_date | report > max_date, .N]
+  if( outside_points > 0 ) {
+    warning( sprintf( "%s report dates in the linelist are outside the reported total data, removing", outside_points ) )
+    dt <- dt[ report >= report_date & report <= max_date ]
+  }
+  
+  linelist_symptom <- as.integer( dt[ , symptom ] - report_date ) + 1 
+  linelist_report  <- as.integer( dt[ , report ] - report_date ) + 1  
+  
+  return( list( report_date = report_date, reported = reported, linelist_symptom = linelist_symptom, linelist_report = linelist_report ))
+}
+
 ##################################################################/
 #  Name: symptom_report.fit
 #
@@ -424,9 +477,9 @@ symptom_report.simulator <- function(
 #  t_symptom_post   - maximum time after report of onset of symptoms
 ###################################################################/
   symptom_report.fit <- function(
-  reported,
-  linelist_symptom,
-  linelist_report,
+  reported         = NULL,
+  linelist_symptom = NULL,
+  linelist_report  = NULL,
   t_symptom_pre  = 30,
   t_symptom_post = 5,
   mcmc_n_samples = 1e2,
@@ -451,9 +504,24 @@ symptom_report.simulator <- function(
   prior_log_symptoms0_max = log( 50 ),
   hyper_gp_period_r    = 2,
   hyper_gp_period_dist = 2,
-  report_date = NULL
+  report_date = NULL,
+  file_reported = NULL,
+  file_linelist = NULL
 )
 {
+    # if data is stored in csv then use it
+    if( !is.null( file_reported ) ) 
+    {
+      data <- .fit_data_from_csv( file_reported, file_linelist )
+      report_date      <- data$report_date
+      reported         <- data$reported 
+      linelist_report  <- data$linelist_report
+      linelist_symptom <- data$linelist_symptom
+    }
+    
+    if( is.null( reported ) | is.null( linelist_symptom) | is.null( linelist_report) )
+      stop( "must specify reported, linelist_symptom and linelist_report OR file_reported and file_linelist")
+    
     # calculate the times require for the simultion
     t_rep <- length( reported )
     t_max <- t_rep + t_symptom_post + t_symptom_pre
