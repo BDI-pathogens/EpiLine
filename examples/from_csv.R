@@ -7,7 +7,7 @@
 #                    on that day (first row header: date,reported)
 #
 #   file_linelist - is a csv containing 2 columns, the first column is the date
-#                   a case was reported and the second colum is the date on 
+#                   a case was reported and the second column is the date on 
 #                   which the case had symptoms (first row header: report,symptom)
 #
 # 
