@@ -127,7 +127,10 @@ Finally we plot the estimated symptom-report distribution at the start and end o
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_distribution.png" width="700" >
 
-Note that model successfully estimates the distribution at the start and end of the reporting period.
+Note that model successfully estimates the distribution at the start and end of the reporting period. 
+Alternatively we can plot the posterior distribution of different quantiles of the symptom-report distribution with time.
+
+<img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_distribution_percentiles.png" width="700" >
 
 ## Usage on Real Data
 To run the model on real data you need to provide the function `symptom_report.fit()` with both the time-series of the number of reported cases and the line list of symptom-report case pairs. Note that it is not necessary to have line list data for all reported cases, so for a reported case where there is no data about the time of symptoms, it should be included in the time-series but not the line list. 
