@@ -43,4 +43,5 @@ fit <- symptom_report.fit( reported, ll_symptom, ll_report, report_date = report
 fit$plot.symptoms( simulation = simulation ) 
 fit$plot.r( simulation = simulation )
 fit$plot.symptom_report.dist( simulation = simulation )
+fit$plot.symptom_report.quantiles( simulation = simulation, quantiles = c( 0.1,0.5,0.9) )
 

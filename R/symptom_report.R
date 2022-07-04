@@ -222,6 +222,97 @@ symptom_report.fit.class <- R6Class(
 
       if( show ) show( p1 )
       return( p1 )
+    },
+    ##################################################################/
+    #  Name: plot.symptom_report.quantiles
+    ###################################################################/
+    plot.symptom_report.quantiles= function( 
+      show = TRUE, 
+      simulation = NULL,
+      quantiles =  c( 0.05,0.25, 0.5, 0.75, 0.95)
+    ) {
+      if( length( quantiles ) > 7 ) 
+        stop( "maximum allowable number of quantiles is 7")
+      
+      t_rep       <- self$stan_data$t_rep    
+      time_offset <- self$stan_data$t_symptom_pre
+      t_max       <- t_rep + time_offset + self$stan_data$t_symptom_post
+      t_rep_min   <- self$stan_data$t_symptom_pre + 1
+      t_rep_max   <- t_rep + time_offset
+      extract     <- self$stan_extract
+      report_date <- self$report_date
+      n_dates     <- t_rep_max - t_rep_min + 1
+      dates       <- report_date + 0:(n_dates - 1)
+      
+      qs_05 <- matrix( nrow = n_dates, ncol = length( quantiles) )
+      qs_50 <- matrix( nrow = n_dates, ncol = length( quantiles) )
+      qs_95 <- matrix( nrow = n_dates, ncol = length( quantiles) )
+      for( tdx in 1:n_dates ) {
+        t      <- t_rep_min + tdx - 1
+        xi     <- extract$xi[,t]
+        lambda <- extract$lambda[,t] 
+        gamma  <- extract$gamma[,t]
+        delta  <- extract$delta[,t]
+        for( qdx in 1:length( quantiles ) ) {
+          qs <- .qjsu( quantiles[ qdx], xi, lambda, gamma, delta ) 
+          qs_05[ tdx, qdx ] <- quantile( qs, probs = 0.05 )
+          qs_50[ tdx, qdx ] <- quantile( qs, probs = 0.5 )
+          qs_95[ tdx, qdx ] <- quantile( qs, probs = 0.95 )
+        }
+      }
+      
+      colour_template = c(
+        "rgba(0,0,0.5,%.3f)",
+        "rgba(0,0.5,0,%.3f)",
+        "rgba(0.5,0,0,%.3f)",
+        "rgba(0,0.5,0.5,%.3f)",
+        "rgba(0.5,0,0.5,%.3f)",
+        "rgba(0,0.5,0,%.3f)",
+        "rgba(0.5,0.5,0.5,%.3f)"
+      )
+      
+      p1 <- plot_ly( type = "scatter", mode = "lines", showlegend = FALSE, line = list( width = 0 ) )
+      for( qdx in length( quantiles ):1) {
+        p1 <- p1 %>% add_trace( x = dates, y = qs_05[ , qdx ] )
+        p1 <- p1 %>% add_trace( x = dates, y = qs_95[ , qdx ], fill = "tonexty", 
+                                fillcolor = sprintf( colour_template[ qdx], 0.3) )
+        p1 <- p1 %>% add_trace( x = dates, y = qs_50[ , qdx ], name = sprintf( "%s percentile", quantiles[qdx] * 100 ),
+                                line = list( width = 5, color = sprintf( colour_template[ qdx], 1 ) ), showlegend = TRUE )
+      }
+      p1 <- p1 %>% layout(
+        legend = list( x = 0.75),
+        xaxis  = list( title = list( text = "symptom date")),
+        yaxis  = list( title = list( text = "symptom-report interval"))
+      )
+
+      if( !is.null( simulation ) ) {
+        if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
+          if( t_rep != simulation$t_rep )
+            stop( "simulation time period not consistent with that of fit" )
+          if( ( self$stan_data$t_symptom_pre != simulation$t_symptom_pre ) | ( self$stan_data$t_symptom_post != simulation$t_symptom_post ) )
+            stop( "simulation t_sympton_pre and _post not consistent with that used in fit")
+          
+          for( tdx in 1:n_dates ) {
+            t      <- t_rep_min + tdx - 1
+            xi     <- simulation$dist_xi[t]
+            lambda <- simulation$dist_lambda[t]
+            gamma  <- simulation$dist_gamma[t]
+            delta  <- simulation$dist_delta[t]
+            for( qdx in 1:length( quantiles ) ) {
+              qs_50[ tdx, qdx] <- .qjsu( quantiles[ qdx], xi, lambda, gamma, delta ) 
+            }
+          }
+          for( qdx in length( quantiles ):1) {
+            p1 <- p1 %>% add_trace( x = dates, y = qs_50[ , qdx ], mode = "markers",
+                                    marker = list( color = sprintf( colour_template[ qdx], 1 ) ))
+          } 
+          
+        } else
+          stop( "simulation must be of type symptom_report.simulation.class" )
+      }
+         
+      if( show ) show( p1 )
+        return( p1 )
     }
   )
 )

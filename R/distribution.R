@@ -18,6 +18,14 @@
   return( xi + lambda * sinh( ( rnorm(n) -gamma) / delta))
 
 ##################################################################
+#  Name: .qjsu
+#
+#  Description: random variable of Johnson SU distribtuion
+##################################################################
+.qjsu <- function( q, xi, lambda, gamma, delta ) 
+  return( xi + lambda * sinh( ( qnorm(q) -gamma) / delta))
+
+##################################################################
 #  Name: .jsu.mean
 #
 #  Description: mean of the Johnson SU distribution

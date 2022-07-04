@@ -30,5 +30,7 @@ fit <- symptom_report.fit(
 fit$plot.symptoms() 
 fit$plot.r()
 fit$plot.symptom_report.dist()
+fit$plot.symptom_report.quantiles( quantiles = c( 0.1,0.5,0.9) )
+
 
 
