@@ -53,7 +53,8 @@ $$
 \end{align}
 $$
 
-These parameters are estimated using line list data of individual cases where the symptoms date report date are known.
+These parameters are estimated using line list data of individual cases where the symptoms date report date are known. 
+Note, for cases where only the report date is known, they should be included in the daily report totals ( $C(t)$ ), but not in the symptom-report line list.
 
 Range priors are put on the initial values of all the parameters and the variances of the Gaussian processes. 
 For efficiency, we allow for the period between sampling of the Gaussian processes to be greater than day, in which case we linearly interpolate for the intermediate days.
@@ -67,6 +68,7 @@ In this example, the daily growth rate $r(t)$ declines linearly throughout the s
 
 ```
 library( EpiLine )
+set.seed( 1 )
 
 # define the length of the simulatiopn
 t_rep          <- 50 # length of time for which data is reported
@@ -75,7 +77,7 @@ t_symptom_post <- 5  # time after the reporting period to simulate
 t_max          <- t_rep + t_symptom_post + t_symptom_pre
 
 # set up the varaible r(t) and distribution
-symptom_0 <- 20                               # initial number of symptomatic people
+symptom_0 <- 2                                # initial number of symptomatic people
 r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
 xi        <- -1 + 6 * ( t_max:1 ) / t_max          # xi parameter in the symptom-report dist
 lambda    <- 2 + ( t_max:1 ) / t_max         # lambda parameter in the symptom-report dist
@@ -130,10 +132,14 @@ Note that model successfully estimates the distribution at the start and end of 
 ## Usage on Real Data
 To run the model on real data you need to provide the function `symptom_report.fit()` with both the time-series of the number of reported cases and the line list of symptom-report case pairs. Note that it is not necessary to have line list data for all reported cases, so for a reported case where there is no data about the time of symptoms, it should be included in the time-series but not the line list. 
 
-Required arguments of `symptom_report.fit( reported, linelist_symptom, linelist_report )`
+The data to fit can be supplied to the model as 3 vectors (`symptom_report.fit( reported, linelist_symptom, linelist_report )`), see `examples\flat_r.R`.
 1. `reported` - a vector of integers with length of the reporting period and containing the total number of cases reported each day. The first entry is for the earliest report date with following entries being ordered for each day in the reporting period (if no reported cases on a day then it should be entered as a 0).
 2. `linelist_symptom` - a vector with length of the number of cases for which both symptom and report date are known. The value is an integer of the date that each case developed symptoms relative to the reporting period start date (a value of 1 means symptoms were developed on the first day for which there are reported cases). Note that values are allowed to be negative.
 3. `linelist_report` - a vector with length of the number of cases for which both symptom and report date are known, paired with `linelist_symptom`. The value is an integer of that each case was reported relative to the reporting period start date. Note that all reported cases should be during the reporting periods used in `reported`, i.e. all values are between 1 and the length of `reported`.
+
+Alternatively data can be read directly from csv files (`symptom_report.fit( file_reported = file_reported, file_linelist = file_linelist )`, see `examples\from_csv.R`.
+1. `file_reported` - is a path to a csv file which has 2 columns, the report date and the total number of cases reported on that day. The first row is the header `date,reported` (see `examples\linear_r_reported.csv`).
+2. `file_linelist` - is a path to a csv file which has 2 columns, the report date and the symptom date for each case for which the pair is known. The first row is the header `report,symptom` (see `examples\linear_r_linelist.csv`). Note, cases for which the only report date is known should be excluded from this file.
 
 Option arguments which can be set are:
 1. `report_date` - the date of the start of the reporting period (e.g. `as.Date("2022-04-01")`). This is only used for the final plotting of the posteriors.
