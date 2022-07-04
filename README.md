@@ -23,7 +23,7 @@ $$
 
 where $\sigma^2_{r_{GP}}$ is the daily variance of the Gaussian process. 
 Note that by making $r(t)$ a Gaussian process instead of $S(t)$ directly a Gaussian process, it means that the prior is that the expected daily chainge in $S(t)$ is the same as the previous day. 
-Next we define $f(\tau,t)$, which is the probability of someome reporting an infection on day $t+\tau$ if they developed symptoms on day $t$. 
+Next we define $f(\tau,t)$, which is the probability of someone reporting an infection on day $t+\tau$ if they developed symptoms on day $t$. 
 Note that $\tau$ can be negative if a case is found prior to symptoms developing (e.g. if contact-traced and tested positive).
 On day $t$ the expected number of cases reported is $\mu(t)$ and given by
 
@@ -32,7 +32,7 @@ $$
 $$
 
 where $\tau_{\rm pre}$ is the maximum number of days pre-reporting the case develops symptoms and 
-$\tau_{\rm pre}$ the maximumn number of days post-reporting the case develops symptoms.
+$\tau_{\rm pre}$ the maximum number of days post-reporting the case develops symptoms.
 The number of observed reported cases $C(t)$ is modelled as negative binomial variable
 
 $$
@@ -64,7 +64,7 @@ The function `symptom_report.fit` fits the model to data and `symptom_report.sim
 ### Example Results
 
 We now demonstrate the model using simulated data which is contained in `examples/linear_r_dist.R`.
-In this example, the daily growth rate $r(t)$ declines linearly throughout the simulation from 0.1 to -0.03, and the mean and variance of the symptom-report distribution decrease linearly with time (with constand skewness and kurtosis). 
+In this example, the daily growth rate $r(t)$ declines linearly throughout the simulation from 0.1 to -0.03, and the mean and variance of the symptom-report distribution decrease linearly with time (with constant skewness and kurtosis). 
 
 ```
 library( EpiLine )
@@ -76,9 +76,9 @@ t_symptom_pre  <- 30 # time before the reporting period to simulate
 t_symptom_post <- 5  # time after the reporting period to simulate
 t_max          <- t_rep + t_symptom_post + t_symptom_pre
 
-# set up the varaible r(t) and distribution
+# set up the variable r(t) and distribution
 symptom_0 <- 2                                # initial number of symptomatic people
-r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
+r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) in the simulation
 xi        <- -1 + 6 * ( t_max:1 ) / t_max          # xi parameter in the symptom-report dist
 lambda    <- 2 + ( t_max:1 ) / t_max         # lambda parameter in the symptom-report dist
 
@@ -115,12 +115,12 @@ First we consider the estimate of the number of people developing symptoms on ea
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_symptoms.png" width="700" >
 
 The dotted vertical lines in the chart show the period over which case reports were provided. 
-The extended time pre- and post- the reporting window is required because some of the reported cases in this period will have developed symptoms outside of the window,.
+The extended time pre- and post- the reporting window is required because some of the reported cases in this period will have developed symptoms outside of the window.
 Next we plot the estimated $r(t)$ for the entire period including the pre- and post- the reporting window  (`fit$plot.r( simulation = simulation`).
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_r.png" width="700" >
 
-Note that outside the reportiny window the estimated $r(t)$ flattens out and is different from the simulated one. 
+Note that outside the reporting window the estimated $r(t)$ flattens out and is different from the simulated one. 
 This is because the vast majority of the symptomtic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will not be 
 
 Finally we plot the estimated symptom-report distribution at the start and end of the reporting period (`fit$plot.symptom_report.dist( simulation = simulation )`).
@@ -147,7 +147,7 @@ Alternatively data can be read directly from csv files (`symptom_report.fit( fil
 Option arguments which can be set are:
 1. `report_date` - the date of the start of the reporting period (e.g. `as.Date("2022-04-01")`). This is only used for the final plotting of the posteriors.
 2. `mcmc_n_samples` - the number of samples that the MCMC chains in Stan run for. This is default to `100` for a quick and dirty result (and will produce Stan warnings when run). We recommend using `1000` or `2000` for producing accurate answers.
-3.  `mcmc_n_hcainss` - the number of MCMC chains in Stan. This is default to `1` for a quick and dirty result, we recommend using at least `3` to allow for cross-chain checks.
+3.  `mcmc_n_chains` - the number of MCMC chains in Stan. This is default to `1` for a quick and dirty result, we recommend using at least `3` to allow for cross-chain checks.
 4.  `prior_xxxxx` - for setting the priors in the model.
 
 The output charts are member functions of the R6 fit object returned by `fit=symptom_report.fit()`. The output is shown in the Example section above for results on simulated data (note with real data you do not provide a simulation object i.e. just call `fit$plot.symptoms()`). 
