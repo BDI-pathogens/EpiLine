@@ -4,6 +4,7 @@
 #
 
 library( EpiLine )
+set.seed( 1 )
 
 # run the simulation using default paramters
 simulation <- symptom_report.simulator()

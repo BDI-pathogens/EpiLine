@@ -5,6 +5,7 @@
 #
 
 library( EpiLine )
+set.seed( 1 )
 
 # define the length of the simulatiopn
 t_rep          <- 50 # length of time for which data is reported
