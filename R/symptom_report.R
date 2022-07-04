@@ -567,7 +567,7 @@ symptom_report.simulator <- function(
 #  t_symptom_pre    - maximum time before report of onset of symptoms
 #  t_symptom_post   - maximum time after report of onset of symptoms
 ###################################################################/
-  symptom_report.fit <- function(
+symptom_report.fit <- function(
   reported         = NULL,
   linelist_symptom = NULL,
   linelist_report  = NULL,
@@ -625,10 +625,6 @@ symptom_report.simulator <- function(
     # enforce the max/min times
     linelist[ , symptom := pmin( pmax( symptom, report - t_symptom_pre ), report + t_symptom_post ) ]
     linelist <- linelist[ , .N, by = c("report", "symptom" ) ][ order(report,symptom) ]
-    
-    # shift the dates by t_symptom_pre since the fitted GPs run for the extra time
-    linelist[ , report  := report ]
-    linelist[ , symptom := symptom ]
     
     # prepare the data for Stan
     data <- list(
