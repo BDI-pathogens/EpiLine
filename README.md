@@ -5,13 +5,13 @@ The estimators require both total case data by date as well as detailed ("line l
 
 ## Symptom-Report Model
 This models the delay between the onset of symptoms and the presenting/testing/reporting of cases to health authorities. 
-Early in outbreaks these delays can are frequently large due to lack of awareness of the symptoms, however, with increased awareness due to public health information the delays will decrease in time. 
+Early in outbreaks these delays can frequently be large due to lack of awareness of the symptoms, however, with increased awareness due to public health information the delays will decrease in time. 
 Even if these delays are constant with time, when estimating their distribution it is necessary to consider both censoring effects and the underlying dynamics of the infection to avoid biases. 
 Conversely, when estimating the dynamics of then infection (e.g. r(t) or R(t)) from reported cases, it is necessary to know these distributions. 
 Therefore, if both infection dynamics and reporting delays are varying at the same time, the best way to account for the biases is to simulataneosly estimate both.
 
 ### Model Decrtiption
-The aim of the model is to understand the interaction between the symptom-report time distribution and the underlying dynamics of the infection rate, therefore we use a very simple for the number of people developing the symptoms each day. 
+The aim of the model is to understand the interaction between the symptom-report time distribution and the underlying dynamics of the infection rate, therefore we use a very simple model for the number of people developing the symptoms each day. 
 We model the daily growth rate $r(t)$ with a Gaussian process, so the daily number of people of developing symptoms $S(t)$ is given by
 
 $$
@@ -23,9 +23,9 @@ $$
 
 where $\sigma^2_{r_{GP}}$ is the daily variance of the Gaussian process. 
 Note that by making $r(t)$ a Gaussian process instead of $S(t)$ directly a Gaussian process, it means that the prior is that the expected daily chainge in $S(t)$ is the same as the previous day. 
-Next we define $f(\tau,t)$, which is probability of someome reporting an infection on day $t+\tau$ if they developed symptoms on day $t$. 
-Note that $\tau$ can be negative if a case is found prior to symptoms developing (e.g. it contact-traced and tested positive).
-On day $t$ the expected number of case reported is $\mu(t)$ and given by
+Next we define $f(\tau,t)$, which is the probability of someome reporting an infection on day $t+\tau$ if they developed symptoms on day $t$. 
+Note that $\tau$ can be negative if a case is found prior to symptoms developing (e.g. if contact-traced and tested positive).
+On day $t$ the expected number of cases reported is $\mu(t)$ and given by
 
 $$
 \mu(t) = \sum_{\tau = -\tau_{\rm post}}^{\tau_{\rm pre}} f(\tau,t-\tau) S(t-\tau)
@@ -93,7 +93,7 @@ simulation <- symptom_report.simulator(
 )
 ```
 
-We next sample from the posterior of the model using Stan (note we're using very short chains for speed so mean and variance of parameter estimates will be of limited accuracy).
+We next sample from the posterior of the model using Stan (note we're using very short chains for computational speed so mean and variance of parameter estimates will be of limited accuracy).
 
 ```
 # data 
@@ -109,26 +109,26 @@ fit <- symptom_report.fit( reported, ll_symptom, ll_report, report_date = report
                            mcmc_n_samples = mcmc_n_samples, mcmc_n_chains = mcmc_n_chains )
 ```
 
-Once the fit is complete (this examples takes roughly 20s), we can plot the posterior of the fitted parameters against the simulation parameters.
+Once the fit is complete (this examples takes roughly 50s), we can plot the posterior of the fitted parameters against the simulation parameters.
 First we consider the estimate of the number of people developing symptoms on each day (`fit$plot.symptoms( simulation = simulation`).
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_symptoms.png" width="700" >
 
 The dotted vertical lines in the chart show the period over which case reports were provided. 
 The extended time pre- and post- the reporting window is required because some of the reported cases in this period will have developed symptoms outside of the window,.
-Next we plot the estimated $r(t)$ for the entire period (including pre- and post- the reporting window).
+Next we plot the estimated $r(t)$ for the entire period including the pre- and post- the reporting window  (`fit$plot.r( simulation = simulation`).
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_r.png" width="700" >
 
 Note that outside the reportiny window the estimated $r(t)$ flattens out and is different from the simulated one. 
 This is because the vast majority of the symptomtic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will not be 
 
-Finally we plot the estimated symptom-report distribution at the start and end of the reporting period.
+Finally we plot the estimated symptom-report distribution at the start and end of the reporting period (`fit$plot.symptom_report.dist( simulation = simulation )`).
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_distribution.png" width="700" >
 
 Note that model successfully estimates the distribution at the start and end of the reporting period. 
-Alternatively we can plot the posterior distribution of different quantiles of the symptom-report distribution with time.
+Alternatively we can plot the posterior distribution of different quantiles of the symptom-report distribution with time (`fit$plot.symptom_report.quantiles( simulation = simulation, quantiles = c( 0.1,0.5,0.9) )`).
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_distribution_percentiles.png" width="700" >
 
@@ -146,15 +146,16 @@ Alternatively data can be read directly from csv files (`symptom_report.fit( fil
 
 Option arguments which can be set are:
 1. `report_date` - the date of the start of the reporting period (e.g. `as.Date("2022-04-01")`). This is only used for the final plotting of the posteriors.
-2. `mcmc_n_samples` - the number of samples that the MCMC chains in Stan run for. This is default to `100` for a quick a dirty result (and will produce Stan warnings when run). We recommend using `1000` or `2000` for producing accurate answers.
-3.  `mcmc_n_hcainss` - the number of MCMC chains in Stan. This is default to `1` for a quick a dirty result, we recommend using at least `3` to allow for cross-chain checks.
+2. `mcmc_n_samples` - the number of samples that the MCMC chains in Stan run for. This is default to `100` for a quick and dirty result (and will produce Stan warnings when run). We recommend using `1000` or `2000` for producing accurate answers.
+3.  `mcmc_n_hcainss` - the number of MCMC chains in Stan. This is default to `1` for a quick and dirty result, we recommend using at least `3` to allow for cross-chain checks.
 4.  `prior_xxxxx` - for setting the priors in the model.
 
 The output charts are member functions of the R6 fit object returned by `fit=symptom_report.fit()`. The output is shown in the Example section above for results on simulated data (note with real data you do not provide a simulation object i.e. just call `fit$plot.symptoms()`). 
 
 1. `fit$plot.symptoms()` - shows a plot of the posterior distribution for the number of people developing symptoms at each time point along with the report data (note this in general is lagged compared to symptoms). 
 2. `fit$plot.r()` - shows a plot of the posterior distribution of the daily growth rate r(t). 
-2. `fit$plot.symptom_report.dist()` - shows a plot of the posterior distribution of symptom-report distribution for the start and end of the reporting period. 
+3. `fit$plot.symptom_report.dist()` - shows a plot of the posterior distribution of symptom-report distribution for the start and end of the reporting period. 
+4. `fit$plot.symptom_report.quantiles()` - shows a plot of the posterior distribution for quantiles of the symptom-report distribution from the start to the end of the reporting period.
 
 ## Installation
 This is a R package and during the package build the Stan code is compiled. To build this package, clone the repository and then call `R CMD INSTALL --no-multiarch --with-keep.source $FULL_PATH_REPO_DIR`, where `$FULL_PATH_REPO_DIR` is the full path to the directory where the respository was cloned to. The package require `rstan`, `Rcpp`, `rstantools`, `StanHeaders`, `data.table`, `moments`, `R6`, `matrixStats` and `plotly` to be installed (all avaialbe on CRAN).
