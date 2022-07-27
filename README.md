@@ -76,9 +76,9 @@ t_symptom_pre  <- 30 # time before the reporting period to simulate
 t_symptom_post <- 5  # time after the reporting period to simulate
 t_max          <- t_rep + t_symptom_post + t_symptom_pre
 
-# set up the varaible r(t) and distribution
+# set up the variable r(t) and distribution
 symptom_0 <- 2                                # initial number of symptomatic people
-r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
+r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) in the simulation
 xi        <- -1 + 6 * ( t_max:1 ) / t_max          # xi parameter in the symptom-report dist
 lambda    <- 2 + ( t_max:1 ) / t_max         # lambda parameter in the symptom-report dist
 
@@ -115,7 +115,7 @@ First we consider the estimate of the number of people developing symptoms on ea
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_symptoms.png" width="700" >
 
 The dotted vertical lines in the chart show the period over which case reports were provided. 
-The extended time pre- and post- the reporting window is required because some of the reported cases in this period will have developed symptoms outside of the window,.
+The extended time pre- and post- the reporting window is required because some of the reported cases in this period will have developed symptoms outside of the window.
 Next we plot the estimated $r(t)$ for the entire period including the pre- and post- the reporting window  (`fit$plot.r( simulation = simulation`).
 
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_r.png" width="700" >
@@ -147,7 +147,7 @@ Alternatively data can be read directly from csv files (`symptom_report.fit( fil
 Option arguments which can be set are:
 1. `report_date` - the date of the start of the reporting period (e.g. `as.Date("2022-04-01")`). This is only used for the final plotting of the posteriors.
 2. `mcmc_n_samples` - the number of samples that the MCMC chains in Stan run for. This is default to `100` for a quick and dirty result (and will produce Stan warnings when run). We recommend using `1000` or `2000` for producing accurate answers.
-3.  `mcmc_n_hcainss` - the number of MCMC chains in Stan. This is default to `1` for a quick and dirty result, we recommend using at least `3` to allow for cross-chain checks.
+3.  `mcmc_n_chains` - the number of MCMC chains in Stan. This is default to `1` for a quick and dirty result, we recommend using at least `3` to allow for cross-chain checks.
 4.  `prior_xxxxx` - for setting the priors in the model.
 
 The output charts are member functions of the R6 fit object returned by `fit=symptom_report.fit()`. The output is shown in the Example section above for results on simulated data (note with real data you do not provide a simulation object i.e. just call `fit$plot.symptoms()`). 
