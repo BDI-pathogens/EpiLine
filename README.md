@@ -1,6 +1,6 @@
 # EpiLine - Estimating epi-curves and distributions from case line list data
 
-This package contains models for estimating epi-curves and individual infection progression distributions simulataneously. 
+This package contains models for estimating epi-curves and individual infection progression distributions simultaneously. 
 The estimators require both total case data by date as well as detailed ("line list") information for a subset of individual.
 
 ## Symptom-Report Model
@@ -8,9 +8,9 @@ This models the delay between the onset of symptoms and the presenting/testing/r
 Early in outbreaks these delays can frequently be large due to lack of awareness of the symptoms, however, with increased awareness due to public health information the delays will decrease in time. 
 Even if these delays are constant with time, when estimating their distribution it is necessary to consider both censoring effects and the underlying dynamics of the infection to avoid biases. 
 Conversely, when estimating the dynamics of then infection (e.g. r(t) or R(t)) from reported cases, it is necessary to know these distributions. 
-Therefore, if both infection dynamics and reporting delays are varying at the same time, the best way to account for the biases is to simulataneosly estimate both.
+Therefore, if both infection dynamics and reporting delays are varying at the same time, the best way to account for the biases is to simultaneously estimate both.
 
-### Model Decrtiption
+### Model Description
 The aim of the model is to understand the interaction between the symptom-report time distribution and the underlying dynamics of the infection rate, therefore we use a very simple model for the number of people developing the symptoms each day. 
 We model the daily growth rate $r(t)$ with a Gaussian process, so the daily number of people of developing symptoms $S(t)$ is given by
 
@@ -22,7 +22,7 @@ $$
 $$
 
 where $\sigma^2_{r_{GP}}$ is the daily variance of the Gaussian process. 
-Note that by making $r(t)$ a Gaussian process instead of $S(t)$ directly a Gaussian process, it means that the prior is that the expected daily chainge in $S(t)$ is the same as the previous day. 
+Note that by making $r(t)$ a Gaussian process instead of $S(t)$ directly a Gaussian process, it means that the prior is that the expected daily change in $S(t)$ is the same as the previous day. 
 Next we define $f(\tau,t)$, which is the probability of someone reporting an infection on day $t+\tau$ if they developed symptoms on day $t$. 
 Note that $\tau$ can be negative if a case is found prior to symptoms developing (e.g. if contact-traced and tested positive).
 On day $t$ the expected number of cases reported is $\mu(t)$ and given by
@@ -41,7 +41,7 @@ $$
 
 where $\phi_{OD}$ is the over-dispersion parameter.
 
-The symptom-report time distribution must support both postive and negative values. In addition, empirically it is observed that this distribution can be highly skewed with heavy tails, therefore we model it using the Johnson SU distribution which contains 4 parameters $(\xi, \lambda, \gamma,\delta)$.
+The symptom-report time distribution must support both positive and negative values. In addition, empirically it is observed that this distribution can be highly skewed with heavy tails, therefore we model it using the Johnson SU distribution which contains 4 parameters $(\xi, \lambda, \gamma,\delta)$.
 To account for the changes in the distribution over time, we model these 4 parameters using Gaussian processes
 
 $$
@@ -121,7 +121,7 @@ Next we plot the estimated $r(t)$ for the entire period including the pre- and p
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_r.png" width="700" >
 
 Note that outside the reporting window the estimated $r(t)$ flattens out and is different from the simulated one. 
-This is because the vast majority of the symptomtic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will not be 
+This is because the vast majority of the symptomatic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will not be 
 
 Finally we plot the estimated symptom-report distribution at the start and end of the reporting period (`fit$plot.symptom_report.dist( simulation = simulation )`).
 
@@ -158,5 +158,5 @@ The output charts are member functions of the R6 fit object returned by `fit=sym
 4. `fit$plot.symptom_report.quantiles()` - shows a plot of the posterior distribution for quantiles of the symptom-report distribution from the start to the end of the reporting period.
 
 ## Installation
-This is a R package and during the package build the Stan code is compiled. To build this package, clone the repository and then call `R CMD INSTALL --no-multiarch --with-keep.source $FULL_PATH_REPO_DIR`, where `$FULL_PATH_REPO_DIR` is the full path to the directory where the respository was cloned to. The package require `rstan`, `Rcpp`, `rstantools`, `StanHeaders`, `data.table`, `moments`, `R6`, `matrixStats` and `plotly` to be installed (all avaialbe on CRAN).
+This is a R package and during the package build the Stan code is compiled. To build this package, clone the repository and then call `R CMD INSTALL --no-multiarch --with-keep.source $FULL_PATH_REPO_DIR`, where `$FULL_PATH_REPO_DIR` is the full path to the directory where the repository was cloned to. The package require `rstan`, `Rcpp`, `rstantools`, `StanHeaders`, `data.table`, `moments`, `R6`, `matrixStats` and `plotly` to be installed (all available on CRAN).
 
