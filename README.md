@@ -121,7 +121,7 @@ Next we plot the estimated $r(t)$ for the entire period including the pre- and p
 <img src="https://github.com/BDI-pathogens/EpiLine/blob/main/documentation/linear_r.png" width="700" >
 
 Note that outside the reporting window the estimated $r(t)$ flattens out and is different from the simulated one. 
-This is because the vast majority of the symptomatic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will not be 
+This is because the vast majority of the symptomatic case in these periods will not be contained within the reported data, therefore the prior distribution on $r(t)$ will dominate the posterior.
 
 Finally we plot the estimated symptom-report distribution at the start and end of the reporting period (`fit$plot.symptom_report.dist( simulation = simulation )`).
 
