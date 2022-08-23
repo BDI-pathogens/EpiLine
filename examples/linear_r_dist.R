@@ -5,6 +5,8 @@
 #
 
 library( EpiLine )
+library( plotly )
+
 set.seed( 1 )
 
 # define the length of the simulation
@@ -15,7 +17,7 @@ t_max          <- t_rep + t_symptom_post + t_symptom_pre
 
 # set up the variable r(t) and distribution
 symptom_0 <- 2                                # initial number of symptomatic people
-r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) in the simulation
+r         <- 0.1 - 0.13 * ( 1:t_max ) / t_max # r(t) inthe simulation
 xi        <- -1 + 6 *( t_max:1 ) / t_max      # xi parameter in the symptom-report dist
 lambda    <- 2 + ( t_max:1 ) / t_max          # lambda parameter in the symptom-report dist
 
@@ -41,8 +43,17 @@ mcmc_n_chains  <- 1
 fit <- symptom_report.fit( reported, ll_symptom, ll_report, report_date = report_date, 
                            mcmc_n_samples = mcmc_n_samples, mcmc_n_chains = mcmc_n_chains )
 
-fit$plot.symptoms( simulation = simulation ) 
-fit$plot.r( simulation = simulation )
-fit$plot.symptom_report.dist( simulation = simulation )
-fit$plot.symptom_report.quantiles( simulation = simulation, quantiles = c( 0.1,0.5,0.9) )
+# save plots
+plt = fit$plot.symptoms( simulation = simulation )
+save_image(plt, "test_linear_symptoms.png")
+plt = fit$plot.r( simulation = simulation )
+save_image(plt, "test_linear_r.png")
+plt = fit$plot.symptom_report.dist( simulation = simulation )
+save_image(plt, "test_linear_distribution.png")
+plt = fit$plot.symptom_report.quantiles( simulation = simulation, quantiles = c( 0.1,0.5,0.9) )
+save_image(plt, "test_linear_distribution_percentiles.png")
 
+fit$plot
+
+# save data
+# write.csv()
