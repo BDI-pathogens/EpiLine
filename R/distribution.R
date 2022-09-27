@@ -6,7 +6,7 @@ lockBinding( "distribution.johnson_su", environment() )
 ##################################################################
 #  Name: .djsu
 #
-#  Description: PDF of the Johnson SU distribtuion
+#  Description: PDF of the Johnson SU distribution
 ##################################################################
 .djsu <- function( x, xi, lambda, gamma, delta ) {
   z  <- ( x - xi) / lambda
@@ -17,7 +17,7 @@ lockBinding( "distribution.johnson_su", environment() )
 ##################################################################
 #  Name: .rjsu
 #
-#  Description: random variable of Johnson SU distribtuion
+#  Description: random variable of Johnson SU distribution
 ##################################################################
 .rjsu <- function( n, xi, lambda, gamma, delta ) 
   return( xi + lambda * sinh( ( rnorm(n) -gamma) / delta))
@@ -25,7 +25,7 @@ lockBinding( "distribution.johnson_su", environment() )
 ##################################################################
 #  Name: .qjsu
 #
-#  Description: random variable of Johnson SU distribtuion
+#  Description: random variable of Johnson SU distribution
 ##################################################################
 .qjsu <- function( q, xi, lambda, gamma, delta ) 
   return( xi + lambda * sinh( ( qnorm(q) -gamma) / delta))
