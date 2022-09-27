@@ -1,3 +1,8 @@
+distribution.gamma = "gamma"
+distribution.johnson_su = "johnson_su"
+lockBinding( "distribution.gamma", environment() )
+lockBinding( "distribution.johnson_su", environment() )
+
 ##################################################################
 #  Name: .djsu
 #

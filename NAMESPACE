@@ -1,4 +1,6 @@
 # constants exposed by package
+export( distribution.gamma )
+export( distribution.johnson_su )
 
 # functions exposed by package
 export( model.symptom_report.stan )
