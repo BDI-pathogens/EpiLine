@@ -28,6 +28,7 @@ data {
   int ll_report[n_ll];
   int ll_symptoms[n_ll];
   int<lower=0> ll_N[n_ll];
+  int<lower=0,upper=t_rep+t_symptom_pre+t_symptom_post> t_static_dist; // freeze delay distribution after this time (-1=no freeze)
   real prior_gamma_min;
   real prior_delta_min;
   real prior_xi_min;
@@ -60,6 +61,7 @@ transformed data {
   int t_t_r_map[ t_max ];
   real prior_r_gp_sd_max_adj;
   int t_dist_max = ceil_integer( ( 1.0 * t_max ) / hyper_gp_period_dist, 1, t_max );
+  int t_static_dist_adj = t_static_dist;
   int t_t_dist_map[ t_max ];
   real prior_xi_gp_sd_max_adj;
   real prior_lambda_gp_sd_max_adj;
@@ -117,6 +119,18 @@ transformed data {
     ddx_conv_min_idx[sdx] = max( 1, t_rep_symptoms + 1 - sdx );
     ddx_conv_max_idx[sdx] = min( t_rep_symptoms,t_rep_symptoms + t_rep - sdx );
   }
+  
+  // if have a static period in the distributions
+  if( t_static_dist > 0 )
+  {
+    if( t_static_dist == 1 ) {
+      t_dist_max = 0;
+    } else {
+      t_dist_max = ceil_integer( ( 1.0 * t_static_dist ) / hyper_gp_period_dist, 1, t_static_dist);
+    }
+  } else {
+    t_static_dist_adj = t_max;
+  }
 }
 
 parameters {
@@ -161,11 +175,17 @@ transformed parameters {
   lambda[1] = lambda0;
   gamma[1]  = gamma0;
   delta[1]  = delta0;
-  for( sdx in 2:t_max ) {
+  for( sdx in 2:t_static_dist_adj ) {
     xi[sdx]     = xi[sdx-1] + xi_gp[ t_t_dist_map[ sdx ]];
     lambda[sdx] = lambda[sdx-1] + lambda_gp[ t_t_dist_map[ sdx ]];
     gamma[sdx]  = gamma[sdx-1] + gamma_gp[ t_t_dist_map[ sdx ]];
     delta[sdx]  = delta[sdx-1] + delta_gp[ t_t_dist_map[ sdx ]];
+  }
+  for( sdx in (t_static_dist_adj+1):t_max ){
+    xi[sdx]     = xi[sdx-1];
+    lambda[sdx] = lambda[sdx-1];
+    gamma[sdx]  = gamma[sdx-1];
+    delta[sdx]  = delta[sdx-1];
   }
 
   reported_intensity = rep_vector( 0, t_rep );
@@ -181,8 +201,6 @@ transformed parameters {
     // when fitting the line list data need to take in to account many observations are truncated
     rep_symptoms_lpdf[ , sdx ] -= log( sum( exp( rep_symptoms_lpdf[ ddx_conv_min_idx[sdx]:ddx_conv_max_idx[sdx], sdx ]) ) );
   }
-  
- 
 }
 
 model {

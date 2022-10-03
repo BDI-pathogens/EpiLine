@@ -419,7 +419,8 @@ symptom_report.simulator <- function(
   dist_lambda    = 2.5,
   dist_gamma     = -2,
   dist_delta     = 1.5,
-  report_var_over_mean = 2
+  report_var_over_mean = 2,
+  linelist_coverage = 1
 ) 
 {
   # run the simulation of symptomatic cases for an extended period of time
@@ -431,8 +432,8 @@ symptom_report.simulator <- function(
     stop( "t_rep must be positive")
   if( t_symptom_pre < 10 )
     stop( "t_symptom_pre must be at least 10")
-  if( t_symptom_post < 5 )
-    stop( "t_symptom_post must be at least 5")
+  if( t_symptom_post < 1 )
+    stop( "t_symptom_post must be at least 1")
   
   # check r is acceptable
   if( length( r ) == 1 ) {
@@ -484,6 +485,10 @@ symptom_report.simulator <- function(
   linelist[ , report  := report - t_symptom_pre ]
   linelist[ , symptom := symptom - t_symptom_pre ]
   linelist = linelist[ report > 0 & report <= t_rep ]
+  
+  if( linelist_coverage <= 0 | linelist_coverage > 1 )
+    stop( "linelist_coverage miust be (0,1)")
+  linelist = linelist[ which( rbinom( linelist[ ,.N ], 1, linelist_coverage ) == 1 ) ]
   
   sim = symptom_report.simulation.class$new( 
     report,
@@ -575,10 +580,11 @@ symptom_report.fit <- function(
   t_symptom_post = 5,
   mcmc_n_samples = 1e2,
   mcmc_n_chains  = 1,
+  t_static_dist  = NA,
   prior_gamma_min  = -20,
   prior_delta_min  = -20,
   prior_xi_min     = -20,
-  prior_lambda_min = 0,
+  prior_lambda_min = 0.1,
   prior_gamma_max  = 20,
   prior_delta_max  = 20,
   prior_xi_max     = 20,
@@ -617,6 +623,9 @@ symptom_report.fit <- function(
     t_rep <- length( reported )
     t_max <- t_rep + t_symptom_post + t_symptom_pre
   
+    # if all dynamic the set static time to 0 else add extra period (i.e. t_static_dist is relative to initial symptoms)
+    t_static_dist = ifelse( is.na( t_static_dist ), 0, t_static_dist )  
+    
     # calculate totals and symptom-report pairs
     if( length( linelist_symptom ) != length( linelist_report ) )
       stop( "linelist of symptom and report dates must be equal" )
@@ -636,6 +645,7 @@ symptom_report.fit <- function(
       ll_report   = linelist[ , report ],
       ll_symptoms = linelist[ , symptom ],
       ll_N        = linelist[ , N], 
+      t_static_dist = t_static_dist,
       prior_gamma_min  = prior_gamma_min ,
       prior_delta_min  = prior_delta_min,
       prior_xi_min     = prior_xi_min,
@@ -664,38 +674,70 @@ symptom_report.fit <- function(
     ll_var  <- var( linelist[ , rep( report - symptom, N)])
     ll_skew <- skewness( linelist[ , rep( report - symptom, N)])
     
-    delta  <- runif( 1,1.5,2)
-    t_skew <- function( gamma ) return( .jsu.skewness( 1, 1, gamma, delta ) - ll_skew )
-    if( t_skew( prior_gamma_min ) * t_skew( prior_gamma_max ) > 0 ) {
-      if( ll_skew > 0 )
-        gamma <- prior_gamma_min
-      else
-        gamma <- prior_gamma_max 
-    } else
-      gamma  <- uniroot( t_skew, lower = prior_gamma_min, upper = prior_gamma_max )$root
-    gamma  <- pmin( pmax( gamma, prior_gamma_min + .eps ), prior_gamma_max - .eps )
+    if( prior_delta_min != prior_delta_max ) {
+      delta <- max( min( runif( 1,1.5,2), prior_delta_max ), prior_delta_min )
+    } else {
+      delta <- prior_delta_min  
+      data$prior_delta_min <- delta - .eps
+      data$prior_delta_max <- delta + .eps
+    }
+
+    if( prior_gamma_min != prior_gamma_max ) {
+      t_skew <- function( gamma ) return( .jsu.skewness( 1, 1, gamma, delta ) - ll_skew )
+      if( t_skew( prior_gamma_min ) * t_skew( prior_gamma_max ) > 0 ) {
+        if( ll_skew > 0 )
+          gamma <- prior_gamma_min
+        else
+          gamma <- prior_gamma_max 
+      } else
+        gamma  <- uniroot( t_skew, lower = prior_gamma_min, upper = prior_gamma_max )$root
+      gamma  <- pmin( pmax( gamma, prior_gamma_min + .eps ), prior_gamma_max - .eps )
+    } else {
+      gamma <- prior_gamma_min  
+      data$prior_gamma_min <- gamma - .eps
+      data$prior_gamma_max <- gamma + .eps
+    }
+ 
+    if( prior_lambda_min != prior_lambda_max ) {
+      t_var  <- function( lambda ) return( .jsu.var( 1, lambda, gamma, delta ) - ll_var )
+      lambda <- uniroot( t_var, lower = prior_lambda_min, upper = prior_lambda_max)$root
+      lambda <- pmin( pmax( lambda, prior_lambda_min + .eps ), prior_lambda_max - .eps )
+    } else {
+      lambda <- prior_lambda_min  
+      data$prior_lambda_min <- lambda - .eps
+      data$prior_lambda_max <- lambda + .eps
+    }
     
-    t_var  <- function( lambda ) return( .jsu.var( 1, lambda, gamma, delta ) - ll_var )
-    lambda <- uniroot( t_var, lower = prior_lambda_min, upper = prior_lambda_max)$root
-    lambda <- pmin( pmax( lambda, prior_lambda_min + .eps ), prior_lambda_max - .eps )
-    
-    t_mean <- function( xi )return( .jsu.mean( xi, lambda, gamma, delta ) - ll_mean )
-    xi     <- uniroot( t_mean, lower = prior_xi_min, upper = prior_xi_max)$root
-    xi     <- pmin( pmax( xi, prior_xi_min + .eps ), prior_xi_max - .eps )
-    
-    # 2.initialize r(0)=0 and for the GPs to be constant  
+    if( prior_xi_min != prior_xi_max ) {
+      t_mean <- function( xi )return( .jsu.mean( xi, lambda, gamma, delta ) - ll_mean )
+      xi     <- uniroot( t_mean, lower = prior_xi_min, upper = prior_xi_max)$root
+      xi     <- pmin( pmax( xi, prior_xi_min + .eps ), prior_xi_max - .eps )
+    } else {
+      xi <- prior_xi_min  
+      data$prior_xi_min <- xi - .eps
+      data$prior_xi_max <- xi + .eps
+    }
+  
+    # 2.initialize r(0)=0 and for the GPs to be constant
+    if( t_static_dist == 1 ) {
+      n_dist_gp <- 0
+    } else {
+      t_dist_max <- ifelse( t_static_dist, t_static_dist, t_max )
+      n_dist_gp  <- ceiling( t_dist_max / data$hyper_gp_period_dist )
+    }
+       
     init_func <- function(x) {
       return( list(
         r_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_r ) ),
-        r_0 = 0,
+        r0 = 0.02,
         gamma0 = gamma,
         delta0 = delta,
         lambda0 = lambda,
         xi0 = xi,
-        xi_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) ),
-        lambda_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) ),
-        gamma_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) ),
-        delta_gp = rep( 0, ceiling( t_max / data$hyper_gp_period_dist ) )
+        xi_gp     = rep( 0, n_dist_gp ),
+        lambda_gp = rep( 0, n_dist_gp ),
+        gamma_gp  = rep( 0, n_dist_gp ),
+        delta_gp  = rep( 0, n_dist_gp )
       ) ) } 
     
     # get Stan model and sample
