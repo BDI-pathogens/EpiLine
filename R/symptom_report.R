@@ -202,10 +202,10 @@ symptom_report.fit.class <- R6Class(
         showlegend = FALSE
       ) %>%
         add_trace( y = ~pdf975, fill = "tonexty", fillcolor = "rgba(0,0,0.5,0.3)") %>%
-        add_trace( y = ~pdf50, line = list( width = 5 ), name = dist1$date, showlegend = TRUE ) %>%
+        add_trace( y = ~pdf50, line = list( width = 5 ), name = format( dist1$date, "%d %B %y"), showlegend = TRUE ) %>%
         add_trace( data = dist2$dist, line = list( color = rgb(0,0.5,0), width= 0 )) %>%
         add_trace( data = dist2$dist, y = ~pdf975, fill = "tonexty", fillcolor = "rgba(0,0.5,0,0.3)", name = "CI 5%-95%") %>%
-        add_trace( data = dist2$dist, y = ~pdf50, line = list( color = rgb(0,0.5,0),  width = 5 ), name = dist2$date, showlegend = TRUE ) %>%
+        add_trace( data = dist2$dist, y = ~pdf50, line = list( color = rgb(0,0.5,0),  width = 5 ), name = format( dist2$date, "%d %B %y"), showlegend = TRUE ) %>%
       layout(
         legend = list( x = 0.8),
         xaxis  = list( title = list( text = "symptom-report date interval")),
@@ -239,7 +239,10 @@ symptom_report.fit.class <- R6Class(
     plot.symptom_report.quantiles= function( 
       show = TRUE, 
       simulation = NULL,
-      quantiles =  c( 0.05,0.25, 0.5, 0.75, 0.95)
+      quantiles =  c( 0.05,0.25, 0.5, 0.75, 0.95),
+      date1 = NULL,
+      date2 = NULL,
+      yrange = NULL
     ) {
       if( length( quantiles ) > 7 ) 
         stop( "maximum allowable number of quantiles is 7")
@@ -251,14 +254,21 @@ symptom_report.fit.class <- R6Class(
       t_rep_max   <- t_rep + time_offset
       extract     <- self$stan_extract
       report_date <- self$report_date
+      
+      if( !is.null( date1 ) ) 
+        t_rep_min <- t_rep_min + as.numeric( date1 - report_date)
+      if( !is.null( date2 ) ) 
+        t_rep_max <- t_rep_min + as.numeric( date2 - date1)
+      
       n_dates     <- t_rep_max - t_rep_min + 1
-      dates       <- report_date + 0:(n_dates - 1)
+      ddx         <- t_rep_min:t_rep_max
+      dates       <- report_date + ddx - self$stan_data$t_symptom_pre -1
       
       qs_05 <- matrix( nrow = n_dates, ncol = length( quantiles) )
       qs_50 <- matrix( nrow = n_dates, ncol = length( quantiles) )
       qs_95 <- matrix( nrow = n_dates, ncol = length( quantiles) )
       for( tdx in 1:n_dates ) {
-        t      <- t_rep_min + tdx - 1
+        t      <- ddx[ tdx ]
         xi     <- extract$xi[,t]
         lambda <- extract$lambda[,t] 
         gamma  <- extract$gamma[,t]
@@ -294,6 +304,8 @@ symptom_report.fit.class <- R6Class(
         xaxis  = list( title = list( text = "symptom date")),
         yaxis  = list( title = list( text = "symptom-report interval"))
       )
+      if( !is.null( yrange ) )
+        p1 <- p1 %>% layout( yaxis = list( range = yrange ))
 
       if( !is.null( simulation ) ) {
         if( is.R6( simulation ) & class( simulation )[1] == "symptom_report.simulation.class" ) {
@@ -303,7 +315,7 @@ symptom_report.fit.class <- R6Class(
             stop( "simulation t_sympton_pre and _post not consistent with that used in fit")
           
           for( tdx in 1:n_dates ) {
-            t      <- t_rep_min + tdx - 1
+            t      <- ddx[ tdx ]
             xi     <- simulation$dist_xi[t]
             lambda <- simulation$dist_lambda[t]
             gamma  <- simulation$dist_gamma[t]
