@@ -154,7 +154,12 @@ symptom_report.fit.class <- R6Class(
     ##################################################################/
     #  Name: plot.symptom_report.dist
     ###################################################################/
-    plot.symptom_report.dist = function( show = TRUE, simulation = NULL ) 
+    plot.symptom_report.dist = function( 
+      show = TRUE, 
+      simulation = NULL,
+      date1 = NULL,
+      date2 = NULL
+    ) 
     {
       t_rep       <- self$stan_data$t_rep    
       time_offset <- self$stan_data$t_symptom_pre
@@ -163,7 +168,12 @@ symptom_report.fit.class <- R6Class(
       t_rep_max   <- t_rep + time_offset
       extract     <- self$stan_extract
       report_date <- self$report_date
-
+      
+      if( !is.null( date1 ) ) 
+        t_rep_min <- t_rep_min + as.numeric( date1 - report_date)
+      if( !is.null( date2 ) ) 
+        t_rep_max <- t_rep_min + as.numeric( date2 - date1)
+      
       dist_days   <- (- self$stan_data$t_symptom_post):(self$stan_data$t_symptom_pre)
       dist_from_t <- function( t_dist ) {
         dist <- data.table( 
@@ -176,7 +186,7 @@ symptom_report.fit.class <- R6Class(
         dist <- data.table( x = dist_days, dummy = 1)[ dist, on= "dummy", allow.cartesian = TRUE]
         dist[ , pdf := .djsu( x, xi, lambda, gamma, delta )]
         dist <- dist[ , .(pdf025 = quantile(pdf, probs = 0.025), pdf50 = median(pdf), pdf975=quantile(pdf, probs = 0.975)), by = "x"]
-        return( list( dist = dist, date =  report_date + t_dist - time_offset ) )  
+        return( list( dist = dist, date =  report_date + t_dist - time_offset - 1) )  
       }
       dist1 = dist_from_t( t_rep_min )
       dist2 = dist_from_t( t_rep_max )
