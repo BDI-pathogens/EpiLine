@@ -9,3 +9,5 @@ src/stan_files/*.o
 src/stan_files/*.hpp
 
 scratch/*
+
+.DS_Store
