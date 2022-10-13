@@ -49,12 +49,31 @@ $$
   \xi(t) &\sim N( \xi( t - 1 ), \sigma^2_{\xi_{GP}}), \\
   \lambda(t) &\sim N( \lambda( t - 1 ), \sigma^2_{\lambda_{GP}}), \\
   \gamma(t) &\sim N( \gamma( t - 1 ), \sigma^2_{\gamma_{GP}}), \\
-  \delta(t) &\sim N( \delta( t - 1 ), \sigma^2_{\delta_{GP}}.) 
+  \delta(t) &\sim N( \delta( t - 1 ), \sigma^2_{\delta_{GP}}). 
 \end{align}
 $$
 
-These parameters are estimated using line list data of individual cases where the symptoms date report date are known. 
-Note, for cases where only the report date is known, they should be included in the daily report totals ( $C(t)$ ), but not in the symptom-report line list.
+At then end of the reporting period, there may not be many reported case for each symptoms date (since the data is right-censored), therefore there is the option to to make the distribution static after a particular time $t_{\rm static}$ i.e. when $t>t_{\rm static}$ then $\xi(t)=\xi(t_{\rm static})$ etc.. 
+These parameters are estimated using line-list data of individual cases where the symptoms date report date are known. 
+Note, for cases where only the report date is known, they should be included in the daily report totals $C(t)$, but not in the symptom-report line list.
+From the line-list, let $N_S(t)$ be number of people who reported symptoms onset as of day $t$, and let $n_{SR}(t,\tau)$ be the number of people who reported symptoms onset as of day $t$ and reported to health authorities on day $t+\tau$. 
+For day $t$, we model { $n_{SR}(t,-\tau_{\rm post}),..., n_{SR}(t,\tau_{\rm pre})$ } using a multinomial distribution with parameters { $x(t,-\tau_{\rm post}),..., x(t,\tau_{\rm pre})$ }. 
+The multinomial parameters are set as the expected number given the total number of cases which reported symptoms onset on that date and the symptoms-report delay distribution for that day
+
+$$
+\begin{align}
+  x(t,\tau ) &= \frac{N_S(t) \\tilde{f} (t,\tau) }{ F(t,\tau) }, \\
+  F(t,\tau ) &=  \sum_{\tau = -\tau_{\rm post}}^{\tau_{\rm pre}} \tilde{f}(\tau,t-\tau), \quad\text{and} \\
+  \tilde{f} (t,\tau) &=
+  \begin{cases}
+    f(t,\tau), & \text{if }  t+\tau \text{ in reporting period,} \\
+    0,        & \text{otherwise,}
+  \end{cases} \\
+\end{align}
+$$
+
+where the $F(t,\tau)$ factor is adjusting for the fact that the line-list is date-censored given that it only includes report dates from the reporting period.
+The distributions for { $n_{SR}(t,-\tau_{\rm post}),..., n_{SR}(t,\tau_{\rm pre})$ } on different days are assumed to be independent and independent of the total number of cases observed on each day.
 
 Range priors are put on the initial values of all the parameters and the variances of the Gaussian processes. 
 For efficiency, we allow for the period between sampling of the Gaussian processes to be greater than day, in which case we linearly interpolate for the intermediate days.
