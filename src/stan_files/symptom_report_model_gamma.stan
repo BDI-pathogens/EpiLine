@@ -79,9 +79,10 @@ transformed data {
   line_list = rep_matrix( 0, t_rep_symptoms, t_max );
   for( idx in 1:n_ll ) {
     tau  = ll_report[ idx ] - ll_symptoms[ idx];
-    ddxx = tau + 1;
-    ddxx = max( min( ddxx, t_rep_symptoms ), 1 );
-    sdxx = max( min( ll_symptoms[idx] + t_symptom_pre, t_max ), 1 );
+    int ddxx_left = min( ddxx, t_rep_symptoms );
+    ddxx = max( ddxx_left, 1 );
+    int sdxx_left = min( ll_symptoms[idx] + t_symptom_pre, t_max );
+    sdxx = max( sdxx_left, 1 );
     line_list[ ddxx, sdxx ] = ll_N[ idx ];
   }
 
