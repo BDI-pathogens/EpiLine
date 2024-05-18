@@ -1,36 +1,43 @@
 # This runs an R script belonging to a local library and saves its plotly graphs as image files
 
-FROM rocker/r-ver:4.0.3
+FROM rocker/r-ver:4.4
 
 RUN apt-get update \
-   && apt-get install -y --no-install-recommends \
-   apt-utils \
-   ed \
-   libnlopt-dev \
+  && apt-get install -y --no-install-recommends \
+  apt-utils \
+  ed \
+  libnlopt-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/
 
 RUN apt-get update && apt-get install -y  --no-install-recommends \
-   software-properties-common \
-   dirmngr \
-   git-core \
-   libcurl4-openssl-dev \
-   libgit2-dev \
-   libssh2-1-dev \
-   libicu-dev \
-   libpng-dev \
-   libudunits2-dev \
-   zlib1g-dev \
-   libgdal-dev \
-   libproj-dev \
-   xml2 \
-   openssl \
-   python3
-# `python` needed for `save_image()`
+  software-properties-common \
+  dirmngr \
+  git-core \
+  libcurl4-openssl-dev \
+  libgit2-dev \
+  libssh2-1-dev \
+  libicu-dev \
+  libpng-dev \
+  libudunits2-dev \
+  zlib1g-dev \
+  libgdal-dev \
+  libproj-dev \
+  xml2 \
+  openssl \
+  python3  # needed for `save_image()`
 
-RUN add-apt-repository --enable-source --yes "ppa:marutter/rrutter4.0"
-RUN add-apt-repository --enable-source --yes "ppa:c2d4u.team/c2d4u4.0+"
-RUN apt install -y r-cran-rcpparmadillo
+# needed to install devtools
+RUN apt-get update && apt-get install -y  --no-install-recommends \
+  libssl-dev \
+  libfontconfig1-dev \
+  libxml2-dev \
+  libharfbuzz-dev \
+  libfribidi-dev \
+  libfreetype6-dev \
+  libpng-dev \
+  libtiff5-dev \
+  libjpeg-dev
 
 RUN mkdir /epiline/
 
@@ -56,7 +63,7 @@ RUN Rscript -e "install.packages('moments', repos='http://cran.rstudio.com/')"
 # needed for `save_image()`
 RUN Rscript -e "install.packages('reticulate', repos='http://cran.rstudio.com/')"
 
-# needed to use local library
+# # needed to use local library
 RUN Rscript -e "install.packages('devtools', repos='http://cran.rstudio.com/')"
 RUN Rscript -e "devtools::load_all()"
 RUN Rscript -e "devtools::install()"
