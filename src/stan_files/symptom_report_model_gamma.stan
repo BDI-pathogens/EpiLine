@@ -20,11 +20,11 @@ functions {
 data {
   int<lower=1> t_rep;           // total days of reporting
   int<lower=1> t_symptom_pre;   // max time of reporting after symptoms
-  int reported[t_rep];          // number of report cases by day
+  array[t_rep] int reported;          // number of report cases by day
   int n_ll;
-  int ll_report[n_ll];
-  int ll_symptoms[n_ll];
-  int<lower=0> ll_N[n_ll];
+  array[n_ll] int ll_report;
+  array[n_ll] int ll_symptoms;
+  array[n_ll] int<lower=0> ll_N;
   real prior_alpha_min;
   real prior_beta_min;
   real prior_alpha_max;
@@ -44,23 +44,23 @@ data {
 transformed data {
   int t_max            = t_rep + t_symptom_pre;
   int t_rep_symptoms   = t_symptom_pre + 1;
-  real t_rep_symptoms_a[t_rep_symptoms];
+  array[t_rep_symptoms] real t_rep_symptoms_a;
   vector[t_rep] t_rep_ones_v;
   matrix[t_rep_symptoms,t_max] line_list;
   int t_r_max = ceil_integer( ( 1.0 * t_max ) / hyper_gp_period_r, 1, t_max );
-  int t_t_r_map[ t_max ];
+  array[ t_max ] int t_t_r_map;
   real prior_r_gp_sd_max_adj;
   int t_dist_max = ceil_integer( ( 1.0 * t_max ) / hyper_gp_period_dist, 1, t_max );
-  int t_t_dist_map[ t_max ];
+  array[ t_max ] int t_t_dist_map;
   real prior_alpha_gp_sd_max_adj;
   real prior_beta_gp_sd_max_adj;
   int sdxx;
   int ddxx;
   int tau;
-  int<lower=1,upper=t_rep> rdx_conv_min_idx[t_max];
-  int<lower=1,upper=t_rep> rdx_conv_max_idx[t_max];
-  int<lower=1,upper=t_rep_symptoms> ddx_conv_min_idx[t_max];
-  int<lower=1,upper=t_rep_symptoms> ddx_conv_max_idx[t_max];
+  array[t_max] int<lower=1,upper=t_rep> rdx_conv_min_idx;
+  array[t_max] int<lower=1,upper=t_rep> rdx_conv_max_idx;
+  array[t_max] int<lower=1,upper=t_rep_symptoms> ddx_conv_min_idx;
+  array[t_max] int<lower=1,upper=t_rep_symptoms> ddx_conv_max_idx;
 
   // NOTE ON INDEXING
   // reported cases are indexed by:                   rdx = 1..t_rep
@@ -111,9 +111,9 @@ parameters {
   real<lower=prior_log_symptoms0_min,upper=prior_log_symptoms0_max> log_symptoms0;
   real<lower=prior_r_0_min,upper=prior_r_0_max> r_0;
   real<lower=0,upper=prior_r_gp_sd_max_adj> r_gp_sd;
-  real<lower=-3*prior_r_gp_sd_max_adj,upper=3*prior_r_gp_sd_max_adj> r_gp[t_r_max];
-  real<lower=-3*prior_alpha_gp_sd_max_adj,upper=3*prior_alpha_gp_sd_max_adj> alpha_gp[t_dist_max];
-  real<lower=-3*prior_beta_gp_sd_max_adj,upper=3*prior_beta_gp_sd_max_adj> beta_gp[t_dist_max];
+  array[t_r_max] real<lower=-3*prior_r_gp_sd_max_adj,upper=3*prior_r_gp_sd_max_adj> r_gp;
+  array[t_dist_max] real<lower=-3*prior_alpha_gp_sd_max_adj,upper=3*prior_alpha_gp_sd_max_adj> alpha_gp;
+  array[t_dist_max] real<lower=-3*prior_beta_gp_sd_max_adj,upper=3*prior_beta_gp_sd_max_adj> beta_gp;
   real<lower=0,upper=prior_alpha_gp_sd_max_adj> alpha_gp_sd;
   real<lower=0,upper=prior_beta_gp_sd_max_adj> beta_gp_sd;
   real<lower=0,upper=prior_phi_od_max> phi_od;
@@ -124,11 +124,11 @@ parameters {
 transformed parameters {
   vector[t_max] symptoms;
   vector[t_max] r;
-  real<lower=prior_alpha_min,upper=prior_alpha_max> alpha[t_max];
-  real<lower=prior_beta_min,upper=prior_beta_max> beta[t_max];
+  array[t_max] real<lower=prior_alpha_min,upper=prior_alpha_max> alpha;
+  array[t_max] real<lower=prior_beta_min,upper=prior_beta_max> beta;
   vector[t_rep] reported_intensity;
   matrix[t_rep_symptoms,t_max] rep_symptoms_lpdf;
-  real dist_cdf[t_rep_symptoms];
+  array[t_rep_symptoms] real dist_cdf;
 
   // the number of symptoms cases follows a log normal process
   for( idx in 1:t_max )
@@ -148,10 +148,10 @@ transformed parameters {
   reported_intensity = rep_vector( 0, t_rep );
   for( sdx in 1:t_max ){
     // calculate the report-symptom distribution for each symptom time
-    dist_cdf[1] = gamma_cdf( 1, alpha[sdx], beta[sdx] );
+    dist_cdf[1] = gamma_cdf( 1 | alpha[sdx], beta[sdx] );
     rep_symptoms_lpdf[ 1, sdx ] = dist_cdf[1];
     for( idx in 2:t_rep_symptoms ) {
-       dist_cdf[idx] = gamma_cdf( idx, alpha[sdx], beta[sdx] );
+       dist_cdf[idx] = gamma_cdf( idx | alpha[sdx], beta[sdx] );
        rep_symptoms_lpdf[ idx, sdx ] = dist_cdf[idx] - dist_cdf[idx-1];
     }
 
