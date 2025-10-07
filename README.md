@@ -53,7 +53,7 @@ $$
 \end{align}
 $$
 
-At then end of the reporting period, there may not be many reported case for each symptoms date (since the data is right-censored), therefore there is the option to to make the distribution static after a particular time $t_{\rm static}$ i.e. when $t>t_{\rm static}$ then $\xi(t)=\xi(t_{\rm static})$ etc.. 
+At then end of the reporting period, there may not be many reported case for each symptoms date (since the data is right-truncated), therefore there is the option to to make the distribution static after a particular time $t_{\rm static}$ i.e. when $t>t_{\rm static}$ then $\xi(t)=\xi(t_{\rm static})$ etc.. 
 These parameters are estimated using line-list data of individual cases where the symptoms date report date are known. 
 Note, for cases where only the report date is known, they should be included in the daily report totals $C(t)$, but not in the symptom-report line list.
 From the line-list, let $N_S(t)$ be number of people who reported symptoms onset as of day $t$, and let $n_{SR}(t,\tau)$ be the number of people who reported symptoms onset as of day $t$ and reported to health authorities on day $t+\tau$. 
@@ -72,7 +72,7 @@ $$
 \end{align}
 $$
 
-where the $F(t,\tau)$ factor is adjusting for the fact that the line-list is date-censored given that it only includes report dates from the reporting period.
+where the $F(t,\tau)$ factor is adjusting for the fact that the line-list is date-truncated given that it only includes report dates from the reporting period.
 The distributions for { $n_{SR}(t,-\tau_{\rm post}),..., n_{SR}(t,\tau_{\rm pre})$ } on different days are assumed to be independent and independent of the total number of cases observed on each day.
 
 Range priors are put on the initial values of all the parameters and the variances of the Gaussian processes. 
